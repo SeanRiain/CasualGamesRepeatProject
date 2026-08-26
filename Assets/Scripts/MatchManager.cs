@@ -73,16 +73,23 @@ public class MatchManager : MonoBehaviour
 
         ball.StopBall();
 
-        AwardCurrencyForMatch(winner);
+        RecordLocalMatchResult(winner);
     }
 
-    private void AwardCurrencyForMatch(PlayerSide winner)
+    private void RecordLocalMatchResult(PlayerSide winner)
     {
         bool localPlayerWon = winner == localPlayerSide;
 
-        int reward = localPlayerWon ? normalWinReward : normalLossReward;
-
-        PlayerDataManager.Instance.AddCurrency(reward);
+        if (localPlayerWon)
+        {
+            PlayerDataManager.Instance.AddCurrency(normalWinReward);
+            PlayerDataManager.Instance.RecordWin();
+        }
+        else
+        {
+            PlayerDataManager.Instance.AddCurrency(normalLossReward);
+            PlayerDataManager.Instance.RecordLoss();
+        }
     }
 
     public void ResetMatch()

@@ -12,8 +12,6 @@ public class CPU : MonoBehaviour
         //move to the position
         //x = current X position of the CPU (horizontal)
         //y = Y position of the Ball in the scene
-      body.MovePosition(new Vector2(
-          transform.position.x,
-          Ball.transform.position.y));  
+      body.MovePosition(new Vector2(transform.position.x, Ball.transform.position.y));  
     }
 }

@@ -20,6 +20,12 @@ public class MatchManager : MonoBehaviour
     private int rightScore = 0;
     private bool matchOver = false;
 
+    [Header("Currency Rewards")]
+    public int normalWinReward = 100;
+    public int normalLossReward = 50;
+
+    public PlayerSide localPlayerSide = PlayerSide.Left;
+
     private void Start()
     {
         ResetMatch();
@@ -39,25 +45,44 @@ public class MatchManager : MonoBehaviour
 
         if (leftScore >= winningScore)
         {
-            EndMatch("Left Player Wins");
+            EndMatch(PlayerSide.Left);
             return;
         }
 
         if (rightScore >= winningScore)
         {
-            EndMatch("Right Player Wins");
+            EndMatch(PlayerSide.Right);
             return;
         }
 
         ball.ResetBall();
     }
 
-    private void EndMatch(string result)
+    private void EndMatch(PlayerSide winner)
     {
         matchOver = true;
 
-        resultText.text = result;
+        if (winner == PlayerSide.Left)
+        {
+            resultText.text = "Left Player Wins";
+        }
+        else
+        {
+            resultText.text = "Right Player Wins";
+        }
+
         ball.StopBall();
+
+        AwardCurrencyForMatch(winner);
+    }
+
+    private void AwardCurrencyForMatch(PlayerSide winner)
+    {
+        bool localPlayerWon = winner == localPlayerSide;
+
+        int reward = localPlayerWon ? normalWinReward : normalLossReward;
+
+        PlayerDataManager.Instance.AddCurrency(reward);
     }
 
     public void ResetMatch()

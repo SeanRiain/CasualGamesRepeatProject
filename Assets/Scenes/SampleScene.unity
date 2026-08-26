@@ -2253,7 +2253,7 @@ MonoBehaviour:
   minY: -3.88
   maxY: 3.9
   body: {fileID: 2097204506}
-  movementSlider: {fileID: 0}
+  movementSlider: {fileID: 1057131972}
 --- !u!50 &2097204506
 Rigidbody2D:
   serializedVersion: 5

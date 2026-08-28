@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38f517200a2a36a468808d560578aab7, type: 3}
+  m_Name: MainCosmeticCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::CosmeticCatalog
+  items:
+  - {fileID: 11400000, guid: f60f590cb7ded734ca591534077d8223, type: 2}
+  - {fileID: 11400000, guid: 4632cd7699e04884abb8c0d9f9408804, type: 2}
+  - {fileID: 11400000, guid: b7f899e0cdb24634989390d56fd020c3, type: 2}
+  - {fileID: 11400000, guid: 4c492cb94d9828e4a922320281984fae, type: 2}
+  - {fileID: 11400000, guid: b719431bbd374e3429d2d5be4197de7d, type: 2}
+  - {fileID: 11400000, guid: 0218db833f7e77c4d9e5922fbef3fbef, type: 2}
+  - {fileID: 11400000, guid: a6a21eb5b4bd6304d8b72da26bff2b0c, type: 2}
+  - {fileID: 11400000, guid: 6a9be3f9e53213446a6c279192179ac4, type: 2}
+  - {fileID: 11400000, guid: 45cc61b269b1f574cad713868b297147, type: 2}

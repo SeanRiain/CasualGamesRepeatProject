@@ -618,6 +618,56 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Goal
   pointFor: 0
   matchManager: {fileID: 760178829}
+--- !u!1 &240635627
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 240635629}
+  - component: {fileID: 240635628}
+  m_Layer: 0
+  m_Name: CosmeticApplier
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &240635628
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 240635627}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2930d52f85c2c6b43b1bdf470a133979, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameCosmeticApplier
+  cosmeticCatalog: {fileID: 11400000, guid: 57d94798864c0bd4684cf8408ab444b0, type: 2}
+  localPaddleRenderer: {fileID: 2097204503}
+  gameCamera: {fileID: 519420031}
+  borderRenderers:
+  - {fileID: 2049219117}
+  - {fileID: 126399350}
+--- !u!4 &240635629
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 240635627}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 441.0334, y: 212.47017, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &368101244
 GameObject:
   m_ObjectHideFlags: 0
@@ -2804,3 +2854,4 @@ SceneRoots:
   - {fileID: 466101230}
   - {fileID: 2135728791}
   - {fileID: 760178830}
+  - {fileID: 240635629}

@@ -774,7 +774,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -1069,7 +1069,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 238016584}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1194569721}
+        m_TargetAssemblyTypeName: FriendsPanelController, Assembly-CSharp
+        m_MethodName: CloseChallengePanel
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &238016584
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1772,7 +1784,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 419601336}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1194569721}
+        m_TargetAssemblyTypeName: FriendsPanelController, Assembly-CSharp
+        m_MethodName: TryAddFriendFromInput
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &419601336
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2476,6 +2500,143 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 500179398}
   m_CullTransparentMesh: 1
+--- !u!1 &517535458
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 517535461}
+  - component: {fileID: 517535460}
+  - component: {fileID: 517535459}
+  m_Layer: 5
+  m_Name: StoreFeedbackText
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &517535459
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 517535458}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_text: New Text
+  m_isRightToLeft: 0
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontSharedMaterials: []
+  m_fontMaterial: {fileID: 0}
+  m_fontMaterials: []
+  m_fontColor32:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+  m_enableVertexGradient: 0
+  m_colorMode: 3
+  m_fontColorGradient:
+    topLeft: {r: 1, g: 1, b: 1, a: 1}
+    topRight: {r: 1, g: 1, b: 1, a: 1}
+    bottomLeft: {r: 1, g: 1, b: 1, a: 1}
+    bottomRight: {r: 1, g: 1, b: 1, a: 1}
+  m_fontColorGradientPreset: {fileID: 0}
+  m_spriteAsset: {fileID: 0}
+  m_tintAllSprites: 0
+  m_StyleSheet: {fileID: 0}
+  m_TextStyleHashCode: 0
+  m_overrideHtmlColors: 0
+  m_faceColor:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontSize: 36
+  m_fontSizeBase: 36
+  m_fontWeight: 400
+  m_enableAutoSizing: 0
+  m_fontSizeMin: 18
+  m_fontSizeMax: 72
+  m_fontStyle: 0
+  m_HorizontalAlignment: 1
+  m_VerticalAlignment: 256
+  m_textAlignment: 65535
+  m_characterSpacing: 0
+  m_characterHorizontalScale: 1
+  m_wordSpacing: 0
+  m_lineSpacing: 0
+  m_lineSpacingMax: 0
+  m_paragraphSpacing: 0
+  m_charWidthMaxAdj: 0
+  m_TextWrappingMode: 1
+  m_wordWrappingRatios: 0.4
+  m_overflowMode: 0
+  m_linkedTextComponent: {fileID: 0}
+  parentLinkedComponent: {fileID: 0}
+  m_enableKerning: 0
+  m_ActiveFontFeatures: 6e72656b
+  m_enableExtraPadding: 0
+  checkPaddingRequired: 0
+  m_isRichText: 1
+  m_EmojiFallbackSupport: 1
+  m_parseCtrlCharacters: 1
+  m_isOrthographic: 1
+  m_isCullingEnabled: 0
+  m_horizontalMapping: 0
+  m_verticalMapping: 0
+  m_uvLineOffset: 0
+  m_geometrySortingOrder: 0
+  m_IsTextObjectScaleStatic: 0
+  m_VertexBufferAutoSizeReduction: 0
+  m_useMaxVisibleDescender: 1
+  m_pageToDisplay: 1
+  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_isUsingLegacyAnimationComponent: 0
+  m_isVolumetricText: 0
+  m_hasFontAssetChanged: 0
+  m_baseMaterial: {fileID: 0}
+  m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!222 &517535460
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 517535458}
+  m_CullTransparentMesh: 1
+--- !u!224 &517535461
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 517535458}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1792107507}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 200, y: 50}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &519466442
 GameObject:
   m_ObjectHideFlags: 0
@@ -4243,6 +4404,7 @@ GameObject:
   - component: {fileID: 1194569718}
   - component: {fileID: 1194569720}
   - component: {fileID: 1194569719}
+  - component: {fileID: 1194569721}
   m_Layer: 5
   m_Name: FriendsPanel
   m_TagString: Untagged
@@ -4313,6 +4475,27 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1194569717}
   m_CullTransparentMesh: 1
+--- !u!114 &1194569721
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1194569717}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca863119919445c478b28f86c9798c67, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FriendsPanelController
+  friendIdInput: {fileID: 457882509}
+  addFriendFeedbackText: {fileID: 500179400}
+  friendListContent: {fileID: 966895558}
+  friendListItemPrefab: {fileID: 4611686771115481479, guid: 69da448a58fa1414396655239007606f, type: 3}
+  noFriendsText: {fileID: 163878351}
+  challengePanel: {fileID: 334445508}
+  opponentNameText: {fileID: 1890358662}
+  matchReasonInput: {fileID: 1276827005}
+  challengeFeedbackText: {fileID: 167440655}
 --- !u!1 &1206201784
 GameObject:
   m_ObjectHideFlags: 0
@@ -4395,7 +4578,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1206201787}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1194569721}
+        m_TargetAssemblyTypeName: FriendsPanelController, Assembly-CSharp
+        m_MethodName: PrepareChallenge
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1206201787
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5686,6 +5881,7 @@ GameObject:
   - component: {fileID: 1792107507}
   - component: {fileID: 1792107509}
   - component: {fileID: 1792107508}
+  - component: {fileID: 1792107510}
   m_Layer: 5
   m_Name: StorePanel
   m_TagString: Untagged
@@ -5707,6 +5903,7 @@ RectTransform:
   m_Children:
   - {fileID: 85968926}
   - {fileID: 175243929}
+  - {fileID: 517535461}
   m_Father: {fileID: 1996715094}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -5752,6 +5949,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1792107506}
   m_CullTransparentMesh: 1
+--- !u!114 &1792107510
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1792107506}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9bc3a09d420ab0f49bb395b97cf57dd4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StorePanelController
+  cosmeticCatalog: {fileID: 11400000, guid: 57d94798864c0bd4684cf8408ab444b0, type: 2}
+  storeItemContent: {fileID: 696553243}
+  storeItemPrefab: {fileID: 2966049129335823910, guid: 8d9ae98ef9a9368448f448d4dad0b24c, type: 3}
+  feedbackText: {fileID: 517535459}
 --- !u!1 &1890358660
 GameObject:
   m_ObjectHideFlags: 0
@@ -6727,6 +6940,7 @@ GameObject:
   - component: {fileID: 2005613462}
   - component: {fileID: 2005613461}
   - component: {fileID: 2005613463}
+  - component: {fileID: 2005613464}
   m_Layer: 0
   m_Name: PlayerDataManager
   m_TagString: Untagged
@@ -6782,6 +6996,19 @@ MonoBehaviour:
   demoFriendDisplayName: Demo Friend
   temporaryRegisteredAccounts: []
   relationships: []
+--- !u!114 &2005613464
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2005613460}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75c6e0585670c9e4cac45f14e3a1a060, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CosmeticSystemInitializer
+  cosmeticCatalog: {fileID: 11400000, guid: 57d94798864c0bd4684cf8408ab444b0, type: 2}
 --- !u!1 &2064442814
 GameObject:
   m_ObjectHideFlags: 0

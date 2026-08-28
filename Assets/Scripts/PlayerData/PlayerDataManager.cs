@@ -20,6 +20,7 @@ public class PlayerDataManager : MonoBehaviour
 
     public event Action<int> CurrencyChanged;
     public event Action<int, int> RecordChanged;
+    public event Action CosmeticsChanged;
 
     public string PlayerId => CurrentPlayer.PlayerId;
     public string DisplayName => CurrentPlayer.DisplayName;
@@ -92,9 +93,7 @@ public class PlayerDataManager : MonoBehaviour
 
         CurrencyChanged?.Invoke(Currency);
 
-        Debug.Log(
-            $"Spent {amount} currency. New balance: {Currency}"
-        );
+        Debug.Log($"Spent {amount} currency. New balance: {Currency}");
 
         return true;
     }
@@ -117,6 +116,39 @@ public class PlayerDataManager : MonoBehaviour
         Debug.Log($"Recorded loss. Total record: {TotalWins}-{TotalLosses}");
     }
 
+    public bool OwnsCosmetic(string cosmeticId)
+    {
+        return CurrentPlayer.OwnsCosmetic(cosmeticId);
+    }
+
+    public string GetEquippedCosmeticId(CosmeticCategory category)
+    {
+        return CurrentPlayer.GetEquippedCosmeticId(category);
+    }
+
+    public bool GrantCosmetic(string cosmeticId)
+    {
+        bool added = CurrentPlayer.AddOwnedCosmetic(cosmeticId);
+
+        if (added)
+        {
+            CosmeticsChanged?.Invoke();
+        }
+
+        return added;
+    }
+
+    public bool EquipCosmetic(CosmeticCategory category, string cosmeticId)
+    {
+        bool changed = CurrentPlayer.SetEquippedCosmetic(category, cosmeticId);
+
+        if (changed)
+        {
+            CosmeticsChanged?.Invoke();
+        }
+
+        return changed;
+    }
 
     //Temporary testing tools
 

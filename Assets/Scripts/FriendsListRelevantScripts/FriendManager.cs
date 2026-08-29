@@ -24,6 +24,8 @@ public class FriendsManager : MonoBehaviour
 
     public MatchSetupData PreparedChallenge { get; private set; }
 
+    public MatchSetupData ActiveMatchSetup { get; private set; }
+
     public IReadOnlyList<FriendRelationshipData> Relationships => relationships;
 
     private void Awake()
@@ -206,10 +208,7 @@ public class FriendsManager : MonoBehaviour
         return true;
     }
 
-    public bool TryPrepareChallenge(
-        string opponentPlayerId,
-        string matchReason,
-        out string message)
+    public bool TryPrepareChallenge(string opponentPlayerId, string matchReason, out string message)
     {
         if (PlayerDataManager.Instance == null)
         {
@@ -217,8 +216,7 @@ public class FriendsManager : MonoBehaviour
             return false;
         }
 
-        FriendRelationshipData relationship =
-            GetRelationshipWith(opponentPlayerId);
+        FriendRelationshipData relationship = GetRelationshipWith(opponentPlayerId);
 
         if (relationship == null)
         {
@@ -227,8 +225,7 @@ public class FriendsManager : MonoBehaviour
             return false;
         }
 
-        PlayerProfileData opponent =
-            GetProfileForPlayer(opponentPlayerId);
+        PlayerProfileData opponent = GetProfileForPlayer(opponentPlayerId);
 
         if (opponent == null)
         {
@@ -244,6 +241,123 @@ public class FriendsManager : MonoBehaviour
         message = $"Challenge prepared for {opponent.DisplayName}.";
 
         return true;
+    }
+
+    public bool TryActivateMatch(MatchSetupData setup, out string message)
+    {
+        if (PlayerDataManager.Instance == null)
+        {
+            message = "Current player account is unavailable.";
+            return false;
+        }
+
+        if (setup == null)
+        {
+            message = "No match setup was provided.";
+            return false;
+        }
+
+        string currentPlayerId = PlayerDataManager.Instance.PlayerId;
+
+        if (!setup.ContainsPlayer(currentPlayerId))
+        {
+            message = "The current account is not part of this match setup.";
+
+            return false;
+        }
+
+        string otherPlayerId = setup.GetOtherPlayerId(currentPlayerId);
+
+        if (string.IsNullOrWhiteSpace(otherPlayerId))
+        {
+            message = "The match does not contain a valid opponent account.";
+
+            return false;
+        }
+
+        if (string.Equals(currentPlayerId, otherPlayerId, StringComparison.Ordinal))
+        {
+            message = "A player cannot be their own match opponent.";
+
+            return false;
+        }
+
+        FriendRelationshipData relationship = GetRelationshipBetween(currentPlayerId, otherPlayerId);
+
+        if (relationship == null)
+        {
+            message = "The opponent does not have a friend relationship with the current player.";
+
+            return false;
+        }
+
+        ActiveMatchSetup = setup;
+
+        PlayerProfileData opponentProfile = GetProfileForPlayer(otherPlayerId);
+
+        if (opponentProfile != null)
+        {
+            message = $"Match context activated against {opponentProfile.DisplayName}.";
+        }
+        else
+        {
+            message = $"Match context activated against {otherPlayerId}.";
+        }
+
+        return true;
+    }
+
+    public bool TryActivatePreparedChallengeForLocalTest(out string message)
+    {
+        if (PreparedChallenge == null)
+        {
+            message = "There is no prepared challenge to accept.";
+
+            return false;
+        }
+
+        MatchSetupData setup = PreparedChallenge;
+
+        if (!TryActivateMatch(setup, out message))
+        {
+            return false;
+        }
+
+        PreparedChallenge = null;
+
+        return true;
+    }
+
+    public bool TryGetActiveFriendOpponentId(out string opponentPlayerId)
+    {
+        opponentPlayerId = null;
+
+        if (PlayerDataManager.Instance == null)
+            return false;
+
+        if (ActiveMatchSetup == null)
+            return false;
+
+        string currentPlayerId = PlayerDataManager.Instance.PlayerId;
+
+        string otherPlayerId = ActiveMatchSetup.GetOtherPlayerId(currentPlayerId);
+
+        if (string.IsNullOrWhiteSpace(otherPlayerId))
+            return false;
+
+        FriendRelationshipData relationship = GetRelationshipBetween(currentPlayerId, otherPlayerId);
+
+        if (relationship == null)
+            return false;
+
+        opponentPlayerId = otherPlayerId;
+
+        return true;
+    }
+
+    public void ClearActiveMatchSetup()
+    {
+        ActiveMatchSetup = null;
     }
 
     public void ClearPreparedChallenge()

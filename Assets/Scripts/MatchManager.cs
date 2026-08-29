@@ -78,17 +78,52 @@ public class MatchManager : MonoBehaviour
 
     private void RecordLocalMatchResult(PlayerSide winner)
     {
+        if (PlayerDataManager.Instance == null)
+        {
+            Debug.LogError("Cannot record match result because no PlayerDataManager exists.");
+
+            return;
+        }
+
         bool localPlayerWon = winner == localPlayerSide;
 
         if (localPlayerWon)
         {
             PlayerDataManager.Instance.AddCurrency(normalWinReward);
+
             PlayerDataManager.Instance.RecordWin();
         }
         else
         {
             PlayerDataManager.Instance.AddCurrency(normalLossReward);
+
             PlayerDataManager.Instance.RecordLoss();
+        }
+
+        TryRecordPairSpecificResult(localPlayerWon);
+    }
+
+    private void TryRecordPairSpecificResult(bool localPlayerWon)
+    {
+        if (FriendsManager.Instance == null)
+        {
+            Debug.Log("No FriendsManager exists. Pair-specific result was not recorded.");
+
+            return;
+        }
+
+        if (!FriendsManager.Instance.TryGetActiveFriendOpponentId(out string opponentPlayerId))
+        {
+            Debug.Log("This match does not have a valid friend opponent. Pair-specific statistics were not changed.");
+
+            return;
+        }
+
+        bool pairResultRecorded = FriendsManager.Instance.RecordMatchResult(opponentPlayerId, localPlayerWon);
+
+        if (!pairResultRecorded)
+        {
+            Debug.LogWarning("The overall match result was recorded, but the pair-specific result could not be recorded.");
         }
     }
 

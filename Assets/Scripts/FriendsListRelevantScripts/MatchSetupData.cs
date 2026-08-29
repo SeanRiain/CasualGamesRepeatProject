@@ -18,4 +18,30 @@ public class MatchSetupData
         this.opponentPlayerId = opponentPlayerId;
         this.matchReason = matchReason;
     }
+
+    public bool ContainsPlayer(string playerId)
+    {
+        if (string.IsNullOrWhiteSpace(playerId))
+            return false;
+
+        return string.Equals(hostPlayerId, playerId, StringComparison.Ordinal) || string.Equals(opponentPlayerId, playerId, StringComparison.Ordinal);
+    }
+
+    public string GetOtherPlayerId(string playerId)
+    {
+        if (string.IsNullOrWhiteSpace(playerId))
+            return null;
+
+        if (string.Equals(hostPlayerId, playerId, StringComparison.Ordinal))
+        {
+            return opponentPlayerId;
+        }
+
+        if (string.Equals(opponentPlayerId, playerId, StringComparison.Ordinal))
+        {
+            return hostPlayerId;
+        }
+
+        return null;
+    }
 }

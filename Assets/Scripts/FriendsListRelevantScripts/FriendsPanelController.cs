@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class FriendsPanelController : MonoBehaviour
 {
@@ -35,6 +36,11 @@ public class FriendsPanelController : MonoBehaviour
 
     [SerializeField]
     private TMP_Text challengeFeedbackText;
+
+
+    [Header("Local Match Testing")]
+    [SerializeField]
+    private string gameSceneName = "GameSession";
 
 
     private string selectedFriendPlayerId;
@@ -161,6 +167,7 @@ public class FriendsPanelController : MonoBehaviour
             return;
         }
 
+
         bool success = FriendsManager.Instance.TryPrepareChallenge(selectedFriendPlayerId, matchReasonInput.text, out string message);
 
         challengeFeedbackText.text = message;
@@ -169,5 +176,33 @@ public class FriendsPanelController : MonoBehaviour
         {
             Debug.Log("Challenge prepared locally. Network transmission is not implemented yet.");
         }
+    }
+
+    [ContextMenu("Debug/Simulate Prepared Challenge Acceptance")]
+    public void SimulatePreparedChallengeAcceptance()
+    {
+        if (FriendsManager.Instance == null)
+        {
+            Debug.LogError("No FriendsManager exists.");
+
+            return;
+        }
+
+        bool success = FriendsManager.Instance.TryActivatePreparedChallengeForLocalTest(out string message);
+
+        if (challengeFeedbackText != null)
+        {
+            challengeFeedbackText.text = message;
+        }
+
+        if (!success)
+        {
+            Debug.LogWarning(message);
+            return;
+        }
+
+        Debug.Log("Prepared challenge accepted locally for testing. The CPU will temporarily control the opponent paddle.");
+
+        SceneManager.LoadScene(gameSceneName);
     }
 }

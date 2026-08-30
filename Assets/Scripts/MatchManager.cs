@@ -1,5 +1,7 @@
-using UnityEngine;
+using System.Collections;
 using TMPro;
+using UnityEngine;
+
 public enum PlayerSide
 {
     Left,
@@ -8,23 +10,38 @@ public enum PlayerSide
 
 public class MatchManager : MonoBehaviour
 {
+    [Header("Match Rules")]
     public int winningScore = 3;
 
+    [Header("Match UI")]
     public TMP_Text leftScoreText;
     public TMP_Text rightScoreText;
     public TMP_Text resultText;
 
+    [SerializeField]
+    private TMP_Text countdownText;
+
+    [Header("Ball")]
     public Ball ball;
 
-    private int leftScore = 0;
-    private int rightScore = 0;
-    private bool matchOver = false;
+    [Header("Point Reset")]
+    [SerializeField]
+    private int scoreCountdownSeconds = 3;
 
     [Header("Currency Rewards")]
     public int normalWinReward = 100;
     public int normalLossReward = 50;
 
+    [Header("Local Player")]
     public PlayerSide localPlayerSide = PlayerSide.Left;
+
+    private int leftScore = 0;
+    private int rightScore = 0;
+
+    private bool matchOver = false;
+    private bool pointResetInProgress = false;
+
+    private Coroutine pointResetCoroutine;
 
     private void Start()
     {
@@ -33,13 +50,17 @@ public class MatchManager : MonoBehaviour
 
     public void AwardPoint(PlayerSide player)
     {
-        if (matchOver)
+        if (matchOver || pointResetInProgress)
             return;
 
         if (player == PlayerSide.Left)
+        {
             leftScore++;
+        }
         else
+        {
             rightScore++;
+        }
 
         UpdateScoreDisplay();
 
@@ -55,12 +76,43 @@ public class MatchManager : MonoBehaviour
             return;
         }
 
-        ball.ResetBall();
+        BeginPointReset(player);
+    }
+
+    private void BeginPointReset(PlayerSide scoringPlayer)
+    {
+        ball.ResetToCentre();
+
+        pointResetInProgress = true;
+
+        pointResetCoroutine = StartCoroutine(PointResetRoutine(scoringPlayer));
+    }
+
+    private IEnumerator PointResetRoutine(PlayerSide scoringPlayer)
+    {
+        for (int secondsRemaining = scoreCountdownSeconds; secondsRemaining > 0; secondsRemaining--)
+        {
+            SetCountdownText(secondsRemaining.ToString());
+
+            yield return new WaitForSeconds(1f);
+        }
+
+        SetCountdownText(string.Empty);
+
+        if (!matchOver)
+        {
+            ball.ServeTowards(scoringPlayer);
+        }
+
+        pointResetInProgress = false;
+        pointResetCoroutine = null;
     }
 
     private void EndMatch(PlayerSide winner)
     {
         matchOver = true;
+
+        CancelPointReset();
 
         if (winner == PlayerSide.Left)
         {
@@ -103,7 +155,8 @@ public class MatchManager : MonoBehaviour
         TryRecordPairSpecificResult(localPlayerWon);
     }
 
-    private void TryRecordPairSpecificResult(bool localPlayerWon)
+    private void TryRecordPairSpecificResult(
+        bool localPlayerWon)
     {
         if (FriendsManager.Instance == null)
         {
@@ -119,7 +172,7 @@ public class MatchManager : MonoBehaviour
             return;
         }
 
-        bool pairResultRecorded = FriendsManager.Instance.RecordMatchResult(opponentPlayerId, localPlayerWon);
+        bool pairResultRecorded = FriendsManager.Instance.RecordMatchResult(opponentPlayerId,localPlayerWon);
 
         if (!pairResultRecorded)
         {
@@ -129,19 +182,49 @@ public class MatchManager : MonoBehaviour
 
     public void ResetMatch()
     {
+        CancelPointReset();
+
         leftScore = 0;
         rightScore = 0;
-        matchOver = false;
 
-        resultText.text = "";
+        matchOver = false;
+        pointResetInProgress = false;
+
+        resultText.text = string.Empty;
+
+        SetCountdownText(string.Empty);
 
         UpdateScoreDisplay();
-        ball.ResetBall();
+
+        ball.ResetToCentre();
+        ball.ServeRandom();
+    }
+
+    private void CancelPointReset()
+    {
+        if (pointResetCoroutine != null)
+        {
+            StopCoroutine(pointResetCoroutine);
+            pointResetCoroutine = null;
+        }
+
+        pointResetInProgress = false;
+
+        SetCountdownText(string.Empty);
+    }
+
+    private void SetCountdownText(string value)
+    {
+        if (countdownText != null)
+        {
+            countdownText.text = value;
+        }
     }
 
     private void UpdateScoreDisplay()
     {
         leftScoreText.text = leftScore.ToString();
+
         rightScoreText.text = rightScore.ToString();
     }
 }

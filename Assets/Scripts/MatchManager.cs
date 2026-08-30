@@ -35,6 +35,8 @@ public class MatchManager : MonoBehaviour
     [Header("Local Player")]
     public PlayerSide localPlayerSide = PlayerSide.Left;
 
+    public event System.Action<PlayerSide> MatchEnded;
+
     private int leftScore = 0;
     private int rightScore = 0;
 
@@ -126,6 +128,8 @@ public class MatchManager : MonoBehaviour
         ball.StopBall();
 
         RecordLocalMatchResult(winner);
+
+        MatchEnded?.Invoke(winner);
     }
 
     private void RecordLocalMatchResult(PlayerSide winner)

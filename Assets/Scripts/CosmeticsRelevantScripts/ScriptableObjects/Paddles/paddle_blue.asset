@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: paddle_blue
   m_EditorClassIdentifier: Assembly-CSharp::CosmeticDefinition
   cosmeticId: paddle_blue
-  displayName: 
+  displayName: Blue Paddle
   category: 0
   softCurrencyPrice: 150
   isDefault: 0

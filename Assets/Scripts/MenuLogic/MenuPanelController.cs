@@ -31,11 +31,6 @@ public class MenuPanelController : MonoBehaviour
         SetActivePanel(storePanel);
     }
 
-    public void StartGame()
-    {
-        SceneManager.LoadScene(gameSceneName);
-    }
-
     private void SetActivePanel(GameObject targetPanel)
     {
         mainMenuPanel.SetActive(targetPanel == mainMenuPanel);

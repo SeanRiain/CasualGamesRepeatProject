@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: border_red
   m_EditorClassIdentifier: Assembly-CSharp::CosmeticDefinition
   cosmeticId: border_red
-  displayName: 
+  displayName: Red Border
   category: 2
   softCurrencyPrice: 75
   isDefault: 0

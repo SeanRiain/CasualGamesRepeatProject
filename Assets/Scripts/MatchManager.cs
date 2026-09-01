@@ -1,5 +1,6 @@
 using System.Collections;
 using TMPro;
+using Unity.Netcode;
 using UnityEngine;
 
 public enum PlayerSide
@@ -8,7 +9,7 @@ public enum PlayerSide
     Right
 }
 
-public class MatchManager : MonoBehaviour
+public class MatchManager : NetworkBehaviour
 {
     [Header("Match Rules")]
     public int winningScore = 3;
@@ -35,6 +36,10 @@ public class MatchManager : MonoBehaviour
     [Header("Local Player")]
     public PlayerSide localPlayerSide = PlayerSide.Left;
 
+    [Header("Network Match Startup")]
+    [SerializeField]
+    private NetworkPaddleCoordinator networkPaddleCoordinator;
+
     public event System.Action<PlayerSide> MatchEnded;
 
     private int leftScore = 0;
@@ -44,14 +49,104 @@ public class MatchManager : MonoBehaviour
     private bool pointResetInProgress = false;
 
     private Coroutine pointResetCoroutine;
+    private Coroutine networkStartCoroutine;
+
+    private NetworkVariable<int> networkLeftScore = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    private NetworkVariable<int> networkRightScore = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    private NetworkVariable<int> networkCountdown = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    private NetworkVariable<int> networkWinnerSide = new NetworkVariable<int>(-1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     private void Start()
     {
+        if (!IsNetworkSessionActive())
+        {
+            ResetMatch();
+        }
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        networkLeftScore.OnValueChanged += HandleNetworkScoreChanged;
+
+        networkRightScore.OnValueChanged += HandleNetworkScoreChanged;
+
+        networkCountdown.OnValueChanged += HandleNetworkCountdownChanged;
+
+        networkWinnerSide.OnValueChanged += HandleNetworkWinnerChanged;
+
+        RefreshNetworkPresentation();
+
+        if (IsServer)
+        {
+            networkStartCoroutine = StartCoroutine(StartNetworkMatchWhenReady());
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        networkLeftScore.OnValueChanged -= HandleNetworkScoreChanged;
+
+        networkRightScore.OnValueChanged -= HandleNetworkScoreChanged;
+
+        networkCountdown.OnValueChanged -= HandleNetworkCountdownChanged;
+
+        networkWinnerSide.OnValueChanged -= HandleNetworkWinnerChanged;
+
+        if (networkStartCoroutine != null)
+        {
+            StopCoroutine(networkStartCoroutine);
+            networkStartCoroutine = null;
+        }
+    }
+
+    private IEnumerator StartNetworkMatchWhenReady()
+    {
+        const float timeoutSeconds = 5f;
+
+        if (networkPaddleCoordinator == null)
+        {
+            Debug.LogWarning("[MatchManager] No NetworkPaddleCoordinator is assigned. Starting the network match without waiting for paddle assignment.");
+
+            ResetMatch();
+
+            networkStartCoroutine = null;
+            yield break;
+        }
+
+        float timeoutAt = Time.realtimeSinceStartup + timeoutSeconds;
+
+        while (Time.realtimeSinceStartup < timeoutAt)
+        {
+            bool leftAssigned = networkPaddleCoordinator.LeftClientId.Value != ulong.MaxValue;
+
+            bool rightAssigned = networkPaddleCoordinator.RightClientId.Value != ulong.MaxValue;
+
+            if (leftAssigned && rightAssigned)
+            {
+                ResetMatch();
+
+                networkStartCoroutine = null;
+                yield break;
+            }
+
+            yield return null;
+        }
+
+        Debug.LogWarning("[MatchManager] Timed out waiting for network paddle assignment. Starting the match anyway.");
+
         ResetMatch();
+
+        networkStartCoroutine = null;
     }
 
     public void AwardPoint(PlayerSide player)
     {
+        if (!HasGameplayAuthority())
+            return;
+
         if (matchOver || pointResetInProgress)
             return;
 
@@ -65,6 +160,7 @@ public class MatchManager : MonoBehaviour
         }
 
         UpdateScoreDisplay();
+        PublishNetworkScores();
 
         if (leftScore >= winningScore)
         {
@@ -96,10 +192,13 @@ public class MatchManager : MonoBehaviour
         {
             SetCountdownText(secondsRemaining.ToString());
 
+            PublishNetworkCountdown(secondsRemaining);
+
             yield return new WaitForSeconds(1f);
         }
 
         SetCountdownText(string.Empty);
+        PublishNetworkCountdown(0);
 
         if (!matchOver)
         {
@@ -112,20 +211,18 @@ public class MatchManager : MonoBehaviour
 
     private void EndMatch(PlayerSide winner)
     {
+        if (!HasGameplayAuthority())
+            return;
+
         matchOver = true;
 
         CancelPointReset();
 
-        if (winner == PlayerSide.Left)
-        {
-            resultText.text = "Left Player Wins";
-        }
-        else
-        {
-            resultText.text = "Right Player Wins";
-        }
+        SetResultText(winner);
 
         ball.StopBall();
+
+        PublishNetworkWinner(winner);
 
         RecordLocalMatchResult(winner);
 
@@ -159,8 +256,7 @@ public class MatchManager : MonoBehaviour
         TryRecordPairSpecificResult(localPlayerWon);
     }
 
-    private void TryRecordPairSpecificResult(
-        bool localPlayerWon)
+    private void TryRecordPairSpecificResult(bool localPlayerWon)
     {
         if (FriendsManager.Instance == null)
         {
@@ -186,6 +282,13 @@ public class MatchManager : MonoBehaviour
 
     public void ResetMatch()
     {
+        if (!HasGameplayAuthority())
+        {
+            Debug.LogWarning("[MatchManager] A non-authoritative client attempted to reset the match.");
+
+            return;
+        }
+
         CancelPointReset();
 
         leftScore = 0;
@@ -200,6 +303,8 @@ public class MatchManager : MonoBehaviour
 
         UpdateScoreDisplay();
 
+        PublishNetworkReset();
+
         ball.ResetToCentre();
         ball.ServeRandom();
     }
@@ -209,12 +314,14 @@ public class MatchManager : MonoBehaviour
         if (pointResetCoroutine != null)
         {
             StopCoroutine(pointResetCoroutine);
+
             pointResetCoroutine = null;
         }
 
         pointResetInProgress = false;
 
         SetCountdownText(string.Empty);
+        PublishNetworkCountdown(0);
     }
 
     private void SetCountdownText(string value)
@@ -225,10 +332,152 @@ public class MatchManager : MonoBehaviour
         }
     }
 
+    private void SetResultText(PlayerSide winner)
+    {
+        if (resultText == null)
+            return;
+
+        if (winner == PlayerSide.Left)
+        {
+            resultText.text = "Left Player Wins";
+        }
+        else
+        {
+            resultText.text = "Right Player Wins";
+        }
+    }
+
     private void UpdateScoreDisplay()
     {
         leftScoreText.text = leftScore.ToString();
 
         rightScoreText.text = rightScore.ToString();
+    }
+
+    private bool IsNetworkSessionActive()
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+
+        return networkManager != null && networkManager.IsListening;
+    }
+
+    private bool HasGameplayAuthority()
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+
+        if (networkManager == null || !networkManager.IsListening)
+        {
+            return true;
+        }
+
+        return networkManager.IsServer;
+    }
+
+    private bool CanPublishNetworkState()
+    {
+        return IsNetworkSessionActive() && NetworkObject != null && NetworkObject.IsSpawned && IsServer;
+    }
+
+    private void PublishNetworkReset()
+    {
+        if (!CanPublishNetworkState())
+            return;
+
+        networkLeftScore.Value = 0;
+        networkRightScore.Value = 0;
+        networkCountdown.Value = 0;
+        networkWinnerSide.Value = -1;
+    }
+
+    private void PublishNetworkScores()
+    {
+        if (!CanPublishNetworkState())
+            return;
+
+        networkLeftScore.Value = leftScore;
+
+        networkRightScore.Value = rightScore;
+    }
+
+    private void PublishNetworkCountdown(int value)
+    {
+        if (!CanPublishNetworkState())
+            return;
+
+        networkCountdown.Value = Mathf.Max(0, value);
+    }
+
+    private void PublishNetworkWinner(PlayerSide winner)
+    {
+        if (!CanPublishNetworkState())
+            return;
+
+        networkWinnerSide.Value = (int)winner;
+    }
+
+    private void HandleNetworkScoreChanged(int previousValue, int newValue)
+    {
+        leftScoreText.text = networkLeftScore.Value.ToString();
+
+        rightScoreText.text = networkRightScore.Value.ToString();
+    }
+
+    private void HandleNetworkCountdownChanged(int previousValue, int newValue)
+    {
+        if (newValue > 0)
+        {
+            SetCountdownText(newValue.ToString());
+        }
+        else
+        {
+            SetCountdownText(string.Empty);
+        }
+    }
+
+    private void HandleNetworkWinnerChanged(int previousValue, int newValue)
+    {
+        if (newValue < 0)
+        {
+            if (resultText != null)
+            {
+                resultText.text = string.Empty;
+            }
+
+            return;
+        }
+
+        PlayerSide winner = (PlayerSide)newValue;
+
+        SetResultText(winner);
+
+        if (!IsServer)
+        {
+            MatchEnded?.Invoke(winner);
+        }
+    }
+
+    private void RefreshNetworkPresentation()
+    {
+        leftScoreText.text = networkLeftScore.Value.ToString();
+
+        rightScoreText.text = networkRightScore.Value.ToString();
+
+        if (networkCountdown.Value > 0)
+        {
+            SetCountdownText(networkCountdown.Value.ToString());
+        }
+        else
+        {
+            SetCountdownText(string.Empty);
+        }
+
+        if (networkWinnerSide.Value >= 0)
+        {
+            SetResultText((PlayerSide) networkWinnerSide.Value);
+        }
+        else if (resultText != null)
+        {
+            resultText.text = string.Empty;
+        }
     }
 }

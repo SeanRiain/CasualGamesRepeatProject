@@ -6,37 +6,55 @@ using UnityEngine.UI;
 public class NetworkConnectionTestUI : MonoBehaviour
 {
     [Header("Controls")]
-    [SerializeField]
-    private Button startHostButton;
-
-    [SerializeField]
-    private Button startClientButton;
-
-    [SerializeField]
-    private Button shutdownButton;
+    [SerializeField] private Button startHostButton;
+    [SerializeField] private Button startClientButton;
+    [SerializeField] private Button shutdownButton;
+    [SerializeField] private TMP_InputField joinCodeInput;
 
     [Header("Status")]
-    [SerializeField]
-    private TMP_Text statusText;
+    [SerializeField] private TMP_Text statusText;
 
     private NetworkManager networkManager;
+    private NetworkSessionController sessionController;
 
-    private void Start()
+    private bool uiBusy;
+    private string busyMessage;
+    private string informationMessage;
+
+    private async void Start()
     {
         networkManager = NetworkManager.Singleton;
+        sessionController = NetworkSessionController.Instance;
 
         if (networkManager == null)
         {
             Debug.LogError("[NetworkTest] No NetworkManager exists.");
-
             SetStatus("ERROR: No NetworkManager");
+            SetButtonStates(false, false, false);
+            return;
+        }
 
+        if (sessionController == null)
+        {
+            Debug.LogError("[NetworkTest] No NetworkSessionController exists.");
+            SetStatus("ERROR: No Session Controller");
+            SetButtonStates(false, false, false);
             return;
         }
 
         networkManager.OnClientConnectedCallback += HandleClientConnected;
-
         networkManager.OnClientDisconnectCallback += HandleClientDisconnected;
+
+        SetBusy("UGS: INITIALIZING...");
+
+        bool ready = await sessionController.EnsureServicesReadyAsync();
+
+        ClearBusy();
+
+        if (!ready)
+        {
+            informationMessage = "UGS initialization failed. Check Console.";
+        }
 
         RefreshStatus();
     }
@@ -52,82 +70,140 @@ public class NetworkConnectionTestUI : MonoBehaviour
             return;
 
         networkManager.OnClientConnectedCallback -= HandleClientConnected;
-
         networkManager.OnClientDisconnectCallback -= HandleClientDisconnected;
     }
 
-    public void StartHost()
+    public async void StartHost()
     {
         if (!CanStartNetwork())
             return;
 
-        bool started = networkManager.StartHost();
+        informationMessage = string.Empty;
 
-        Debug.Log($"[NetworkTest] StartHost returned {started}.");
+        SetBusy("Creating Relay session...");
+
+        string joinCode = await sessionController.CreateRelaySessionAsync();
+
+        ClearBusy();
+
+        if (string.IsNullOrWhiteSpace(joinCode))
+        {
+            informationMessage = "Could not create Relay session. Check Console.";
+        }
 
         RefreshStatus();
     }
 
-    public void StartClient()
+    public async void StartClient()
     {
         if (!CanStartNetwork())
             return;
 
-        bool started = networkManager.StartClient();
+        string joinCode = joinCodeInput != null ? joinCodeInput.text : string.Empty;
 
-        Debug.Log($"[NetworkTest] StartClient returned {started}.");
+        if (string.IsNullOrWhiteSpace(joinCode))
+        {
+            informationMessage = "Enter a join code.";
+            RefreshStatus();
+            return;
+        }
+
+        informationMessage = string.Empty;
+
+        SetBusy("Joining Relay session...");
+
+        bool joined = await sessionController.JoinRelaySessionByCodeAsync(joinCode);
+
+        ClearBusy();
+
+        if (!joined)
+        {
+            informationMessage = "Could not join Relay session. Check code and Console.";
+        }
 
         RefreshStatus();
     }
 
-    public void Shutdown()
+    public async void Shutdown()
     {
-        if (networkManager == null)
+        if (sessionController == null)
             return;
 
-        if (!networkManager.IsListening)
-            return;
+        SetBusy("Closing session...");
 
-        Debug.Log("[NetworkTest] Shutdown requested.");
+        await sessionController.ShutdownCurrentSessionAsync();
 
-        networkManager.Shutdown();
+        ClearBusy();
+
+        informationMessage = string.Empty;
 
         RefreshStatus();
     }
 
     private bool CanStartNetwork()
     {
-        return networkManager != null && !networkManager.IsListening;
+        return networkManager != null &&
+               sessionController != null &&
+               !uiBusy &&
+               !sessionController.IsSessionOperationInProgress &&
+               !networkManager.IsListening &&
+               !sessionController.HasOnlineSession;
     }
 
     private void HandleClientConnected(ulong clientId)
     {
         Debug.Log($"[NetworkTest] Client connected: {clientId}. Connected IDs: {GetConnectedClientIds()}");
-
         RefreshStatus();
     }
 
     private void HandleClientDisconnected(ulong clientId)
     {
         Debug.Log($"[NetworkTest] Client disconnected: {clientId}. Connected IDs: {GetConnectedClientIds()}");
-
         RefreshStatus();
     }
 
     private void RefreshStatus()
     {
-        if (networkManager == null)
+        if (networkManager == null || sessionController == null)
         {
-            SetButtonStates(false, false, false);
-
             return;
         }
 
+        if (uiBusy)
+        {
+            SetStatus(busyMessage);
+            SetButtonStates(false, false, false);
+            SetJoinCodeInputState(false);
+            return;
+        }
+
+        if (!sessionController.IsServicesReady)
+        {
+            SetStatus("UGS: NOT READY\n" + informationMessage);
+            SetButtonStates(false, false, false);
+            SetJoinCodeInputState(false);
+            return;
+        }
+
+        string playerId = sessionController.AuthenticatedPlayerId;
+
         if (!networkManager.IsListening)
         {
-            SetStatus("Network: OFFLINE");
+            string status = "UGS: READY\n" +
+                            $"Player ID: {playerId}\n" +
+                            "Network: OFFLINE";
 
-            SetButtonStates(startHost: true, startClient: true, shutdown: false);
+            if (!string.IsNullOrWhiteSpace(informationMessage))
+            {
+                status += "\n" + informationMessage;
+            }
+
+            SetStatus(status);
+
+            bool canStart = !sessionController.HasOnlineSession;
+
+            SetButtonStates(canStart, canStart, sessionController.HasOnlineSession);
+            SetJoinCodeInputState(canStart);
 
             return;
         }
@@ -149,12 +225,27 @@ public class NetworkConnectionTestUI : MonoBehaviour
 
         string connectionState = networkManager.IsConnectedClient ? "CONNECTED" : "CONNECTING";
 
-        SetStatus($"Role: {role}\n State: {connectionState}\n Local Client ID: {networkManager.LocalClientId}\n Connected IDs: {GetConnectedClientIds()}");
+        string statusTextValue = "UGS: READY\n" +
+                                 $"Player ID: {playerId}\n" +
+                                 $"Role: {role}\n" +
+                                 $"State: {connectionState}\n" +
+                                 $"Local Client ID: {networkManager.LocalClientId}\n" +
+                                 $"Connected IDs: {GetConnectedClientIds()}";
 
-        SetButtonStates(
-            startHost: false,
-            startClient: false,
-            shutdown: true);
+        if (networkManager.IsHost)
+        {
+            string joinCode = sessionController.CurrentJoinCode;
+
+            if (!string.IsNullOrWhiteSpace(joinCode))
+            {
+                statusTextValue += $"\nJoin Code: {joinCode}";
+            }
+        }
+
+        SetStatus(statusTextValue);
+
+        SetButtonStates(false, false, true);
+        SetJoinCodeInputState(false);
     }
 
     private string GetConnectedClientIds()
@@ -163,9 +254,25 @@ public class NetworkConnectionTestUI : MonoBehaviour
             return "None";
 
         if (networkManager.ConnectedClientsIds.Count == 0)
+        {
             return "None";
+        }
 
         return string.Join(", ", networkManager.ConnectedClientsIds);
+    }
+
+    private void SetBusy(string message)
+    {
+        uiBusy = true;
+        busyMessage = message;
+
+        RefreshStatus();
+    }
+
+    private void ClearBusy()
+    {
+        uiBusy = false;
+        busyMessage = string.Empty;
     }
 
     private void SetStatus(string message)
@@ -191,6 +298,14 @@ public class NetworkConnectionTestUI : MonoBehaviour
         if (shutdownButton != null)
         {
             shutdownButton.interactable = shutdown;
+        }
+    }
+
+    private void SetJoinCodeInputState(bool interactable)
+    {
+        if (joinCodeInput != null)
+        {
+            joinCodeInput.interactable = interactable;
         }
     }
 }

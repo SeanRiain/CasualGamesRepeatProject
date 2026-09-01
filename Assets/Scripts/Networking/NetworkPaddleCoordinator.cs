@@ -171,4 +171,35 @@ public class NetworkPaddleCoordinator : NetworkBehaviour
 
         Debug.Log($"[NetworkPaddleCoordinator] Local Client {NetworkManager.LocalClientId}: Left={left}, Right={right}.");
     }
+
+    public bool TryGetPlayerSide(ulong clientId, out PlayerSide side)
+    {
+        if (LeftClientId.Value == clientId)
+        {
+            side = PlayerSide.Left;
+            return true;
+        }
+
+        if (RightClientId.Value == clientId)
+        {
+            side = PlayerSide.Right;
+            return true;
+        }
+
+        side = default;
+        return false;
+    }
+
+    public bool TryGetLocalPlayerSide(out PlayerSide side)
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+
+        if (networkManager == null)
+        {
+            side = default;
+            return false;
+        }
+
+        return TryGetPlayerSide(networkManager.LocalClientId, out side);
+    }
 }

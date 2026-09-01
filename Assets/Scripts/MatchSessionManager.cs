@@ -1,4 +1,5 @@
 using TMPro;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -10,30 +11,40 @@ public enum MatchSessionState
     Closing
 }
 
-public class MatchSessionManager : MonoBehaviour
+public class MatchSessionManager : NetworkBehaviour
 {
     [Header("Match")]
-    [SerializeField]
-    private MatchManager matchManager;
+    [SerializeField] private MatchManager matchManager;
+    [SerializeField] private NetworkPaddleCoordinator networkPaddleCoordinator;
 
     [Header("Match Result UI")]
-    [SerializeField]
-    private GameObject resultPanel;
-
-    [SerializeField]
-    private TMP_Text rematchStatusText;
-
-    [SerializeField]
-    private Button rematchButton;
+    [SerializeField] private GameObject resultPanel;
+    [SerializeField] private TMP_Text rematchStatusText;
+    [SerializeField] private Button rematchButton;
 
     [Header("Navigation")]
-    [SerializeField]
-    private string menusSceneName = "Menus";
+    [SerializeField] private string menusSceneName = "Menus";
 
     public MatchSessionState State { get; private set; } = MatchSessionState.MatchInProgress;
 
-    private bool hostRematchConsent;
-    private bool opponentRematchConsent;
+    // Retained only for the direct, non-networked local test path.
+    private bool localHostRematchConsent;
+    private bool localOpponentRematchConsent;
+
+    private NetworkVariable<MatchSessionState> networkState = new NetworkVariable<MatchSessionState>(
+        MatchSessionState.MatchInProgress,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
+
+    private NetworkVariable<bool> leftRematchConsent = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
+
+    private NetworkVariable<bool> rightRematchConsent = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
 
     private void OnEnable()
     {
@@ -45,20 +56,10 @@ public class MatchSessionManager : MonoBehaviour
 
     private void Start()
     {
-        State = MatchSessionState.MatchInProgress;
-
-        ResetRematchConsent();
-
-        if (resultPanel != null)
+        if (!IsNetworkSessionActive())
         {
-            resultPanel.SetActive(false);
-        }
-
-        SetRematchStatus(string.Empty);
-
-        if (rematchButton != null)
-        {
-            rematchButton.interactable = true;
+            ResetLocalRematchConsent();
+            ApplyStatePresentation(MatchSessionState.MatchInProgress);
         }
     }
 
@@ -70,56 +71,381 @@ public class MatchSessionManager : MonoBehaviour
         }
     }
 
+    public override void OnNetworkSpawn()
+    {
+        networkState.OnValueChanged += HandleNetworkStateChanged;
+        leftRematchConsent.OnValueChanged += HandleNetworkConsentChanged;
+        rightRematchConsent.OnValueChanged += HandleNetworkConsentChanged;
+
+        if (IsServer)
+        {
+            leftRematchConsent.Value = false;
+            rightRematchConsent.Value = false;
+            networkState.Value = MatchSessionState.MatchInProgress;
+        }
+
+        ApplyStatePresentation(networkState.Value);
+        RefreshNetworkRematchPresentation();
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        networkState.OnValueChanged -= HandleNetworkStateChanged;
+        leftRematchConsent.OnValueChanged -= HandleNetworkConsentChanged;
+        rightRematchConsent.OnValueChanged -= HandleNetworkConsentChanged;
+    }
+
     private void HandleMatchEnded(PlayerSide winner)
     {
-        ResetRematchConsent();
-
-        State = MatchSessionState.AwaitingRematchDecision;
-
-        if (resultPanel != null)
+        if (!IsNetworkSessionActive())
         {
-            resultPanel.SetActive(true);
+            ResetLocalRematchConsent();
+            ApplyStatePresentation(MatchSessionState.AwaitingRematchDecision);
+            return;
         }
 
-        if (rematchButton != null)
-        {
-            rematchButton.interactable = true;
-        }
+        // MatchManager publishes the winner to both peers,
+        // but only the server decides canonical session state.
+        if (!IsServer)
+            return;
 
-        SetRematchStatus(string.Empty);
+        leftRematchConsent.Value = false;
+        rightRematchConsent.Value = false;
+
+        SetServerState(MatchSessionState.AwaitingRematchDecision);
     }
 
     public void RequestLocalRematch()
     {
-        if (State !=
-            MatchSessionState.AwaitingRematchDecision)
+        if (State != MatchSessionState.AwaitingRematchDecision)
         {
             return;
         }
 
+        if (!IsNetworkSessionActive())
+        {
+            RequestLocalOfflineRematch();
+            return;
+        }
+
+        if (!IsSpawned)
+        {
+            Debug.LogWarning("[MatchSession] Network session object is not spawned.");
+            return;
+        }
+
+        RequestRematchRpc();
+    }
+
+    [Rpc(SendTo.Server, RequireOwnership = false)]
+    private void RequestRematchRpc(RpcParams rpcParams = default)
+    {
+        if (networkState.Value != MatchSessionState.AwaitingRematchDecision)
+        {
+            return;
+        }
+
+        ulong senderClientId = rpcParams.Receive.SenderClientId;
+
+        if (!TryGetParticipantSide(senderClientId, out PlayerSide senderSide))
+        {
+            Debug.LogWarning($"[MatchSession] Rematch request rejected from non-participant Client {senderClientId}.");
+            return;
+        }
+
+        if (senderSide == PlayerSide.Left)
+        {
+            leftRematchConsent.Value = true;
+        }
+        else
+        {
+            rightRematchConsent.Value = true;
+        }
+
+        Debug.Log($"[MatchSession] Rematch requested by {senderSide} / Client {senderClientId}.");
+
+        RefreshNetworkRematchPresentation();
+
+        if (BothNetworkPlayersWantRematch())
+        {
+            BeginNetworkRematch();
+        }
+    }
+
+    private bool BothNetworkPlayersWantRematch()
+    {
+        return leftRematchConsent.Value && rightRematchConsent.Value;
+    }
+
+    private void BeginNetworkRematch()
+    {
+        if (!IsServer)
+            return;
+
+        Debug.Log("[MatchSession] Both players accepted rematch.");
+
+        // MatchManager.ResetMatch() is already server-authoritative
+        // from Milestone 4 and republishes score/countdown/winner.
+        matchManager.ResetMatch();
+
+        leftRematchConsent.Value = false;
+        rightRematchConsent.Value = false;
+
+        SetServerState(MatchSessionState.MatchInProgress);
+    }
+
+    public void RequestLocalLeave()
+    {
+        if (State == MatchSessionState.Closing)
+        {
+            return;
+        }
+
+        if (!IsNetworkSessionActive())
+        {
+            string currentPlayerId = null;
+
+            if (PlayerDataManager.Instance != null)
+            {
+                currentPlayerId = PlayerDataManager.Instance.PlayerId;
+            }
+
+            HandlePlayerLeftLocally(currentPlayerId);
+            return;
+        }
+
+        if (!IsSpawned)
+        {
+            Debug.LogWarning("[MatchSession] Network session object is not spawned.");
+            return;
+        }
+
+        RequestLeaveRpc();
+    }
+
+    [Rpc(SendTo.Server, RequireOwnership = false)]
+    private void RequestLeaveRpc(RpcParams rpcParams = default)
+    {
+        if (networkState.Value == MatchSessionState.Closing)
+        {
+            return;
+        }
+
+        ulong senderClientId = rpcParams.Receive.SenderClientId;
+
+        if (!TryGetParticipantSide(senderClientId, out PlayerSide senderSide))
+        {
+            Debug.LogWarning($"[MatchSession] Leave request rejected from non-participant Client {senderClientId}.");
+            return;
+        }
+
+        Debug.Log($"[MatchSession] Leave requested by {senderSide} / Client {senderClientId}.");
+
+        MatchSessionState previousState = networkState.Value;
+
+        SetServerState(MatchSessionState.Closing);
+
+        if (NetworkSessionController.Instance == null)
+        {
+            Debug.LogError("[MatchSession] No persistent NetworkSessionController exists.");
+            SetServerState(previousState);
+            return;
+        }
+
+        bool closeStarted = NetworkSessionController.Instance.TryCloseSessionToScene(menusSceneName);
+
+        if (!closeStarted)
+        {
+            Debug.LogError("[MatchSession] Network session close could not be started.");
+            SetServerState(previousState);
+        }
+    }
+
+    private bool TryGetParticipantSide(ulong clientId, out PlayerSide side)
+    {
+        if (networkPaddleCoordinator == null)
+        {
+            side = default;
+
+            Debug.LogError("[MatchSession] No NetworkPaddleCoordinator is assigned.");
+            return false;
+        }
+
+        return networkPaddleCoordinator.TryGetPlayerSide(clientId, out side);
+    }
+
+    private void SetServerState(MatchSessionState newState)
+    {
+        if (!IsServer)
+            return;
+
+        networkState.Value = newState;
+
+        // Ensure Host presentation updates immediately
+        // even before the next synchronization pass.
+        ApplyStatePresentation(newState);
+    }
+
+    private void HandleNetworkStateChanged(MatchSessionState previousValue, MatchSessionState newValue)
+    {
+        ApplyStatePresentation(newValue);
+    }
+
+    private void HandleNetworkConsentChanged(bool previousValue, bool newValue)
+    {
+        RefreshNetworkRematchPresentation();
+    }
+
+    private void ApplyStatePresentation(MatchSessionState newState)
+    {
+        State = newState;
+
+        switch (newState)
+        {
+            case MatchSessionState.MatchInProgress:
+                if (resultPanel != null)
+                {
+                    resultPanel.SetActive(false);
+                }
+
+                SetRematchStatus(string.Empty);
+
+                if (rematchButton != null)
+                {
+                    rematchButton.interactable = true;
+                }
+
+                break;
+
+            case MatchSessionState.AwaitingRematchDecision:
+                if (resultPanel != null)
+                {
+                    resultPanel.SetActive(true);
+                }
+
+                if (IsNetworkSessionActive())
+                {
+                    RefreshNetworkRematchPresentation();
+                }
+                else
+                {
+                    if (rematchButton != null)
+                    {
+                        rematchButton.interactable = true;
+                    }
+
+                    SetRematchStatus(string.Empty);
+                }
+
+                break;
+
+            case MatchSessionState.Closing:
+                if (rematchButton != null)
+                {
+                    rematchButton.interactable = false;
+                }
+
+                SetRematchStatus("Leaving session...");
+                ClearLocalMatchContext();
+
+                break;
+        }
+    }
+
+    private void RefreshNetworkRematchPresentation()
+    {
+        if (!IsNetworkSessionActive())
+            return;
+
+        if (State != MatchSessionState.AwaitingRematchDecision)
+        {
+            return;
+        }
+
+        if (networkPaddleCoordinator == null || !networkPaddleCoordinator.TryGetLocalPlayerSide(out PlayerSide localSide))
+        {
+            if (rematchButton != null)
+            {
+                rematchButton.interactable = false;
+            }
+
+            SetRematchStatus("Waiting for player assignment...");
+            return;
+        }
+
+        bool localConsent;
+        bool opponentConsent;
+
+        if (localSide == PlayerSide.Left)
+        {
+            localConsent = leftRematchConsent.Value;
+            opponentConsent = rightRematchConsent.Value;
+        }
+        else
+        {
+            localConsent = rightRematchConsent.Value;
+            opponentConsent = leftRematchConsent.Value;
+        }
+
+        if (rematchButton != null)
+        {
+            rematchButton.interactable = !localConsent;
+        }
+
+        if (localConsent && !opponentConsent)
+        {
+            SetRematchStatus("Rematch requested. Waiting for opponent...");
+        }
+        else if (!localConsent && opponentConsent)
+        {
+            SetRematchStatus("Opponent requested a rematch.");
+        }
+        else
+        {
+            SetRematchStatus(string.Empty);
+        }
+    }
+
+    private bool IsNetworkSessionActive()
+    {
+        NetworkManager networkManager = NetworkManager.Singleton;
+
+        return networkManager != null && networkManager.IsListening;
+    }
+
+    private void ClearLocalMatchContext()
+    {
+        if (FriendsManager.Instance != null)
+        {
+            FriendsManager.Instance.ClearActiveMatchSetup();
+        }
+    }
+
+    // -------------------------------------------------
+    // Direct local/offline fallback
+    // -------------------------------------------------
+
+    private void RequestLocalOfflineRematch()
+    {
         if (PlayerDataManager.Instance == null)
         {
             SetRematchStatus("Current player account is unavailable.");
-
             return;
         }
 
-        RegisterRematchConsent(PlayerDataManager.Instance.PlayerId);
+        RegisterOfflineRematchConsent(PlayerDataManager.Instance.PlayerId);
     }
 
-    public bool RegisterRematchConsent(string playerId)
+    private bool RegisterOfflineRematchConsent(string playerId)
     {
         if (State != MatchSessionState.AwaitingRematchDecision)
         {
-            Debug.LogWarning("Rematch consent cannot be recorded because the current match has not ended.");
-
             return false;
         }
 
         if (FriendsManager.Instance == null || FriendsManager.Instance.ActiveMatchSetup == null)
         {
             SetRematchStatus("No active two-player match exists.");
-
             return false;
         }
 
@@ -127,24 +453,21 @@ public class MatchSessionManager : MonoBehaviour
 
         if (!setup.ContainsPlayer(playerId))
         {
-            Debug.LogWarning("Rematch consent came from an account that is not part of this session.");
-
             return false;
         }
 
         if (playerId == setup.HostPlayerId)
         {
-            hostRematchConsent = true;
+            localHostRematchConsent = true;
         }
         else if (playerId == setup.OpponentPlayerId)
         {
-            opponentRematchConsent = true;
+            localOpponentRematchConsent = true;
         }
 
-        if (BothPlayersWantRematch())
+        if (localHostRematchConsent && localOpponentRematchConsent)
         {
-            BeginRematch();
-
+            BeginOfflineRematch();
             return true;
         }
 
@@ -167,51 +490,19 @@ public class MatchSessionManager : MonoBehaviour
         return true;
     }
 
-    private bool BothPlayersWantRematch()
+    private void BeginOfflineRematch()
     {
-        return hostRematchConsent && opponentRematchConsent;
-    }
-
-    private void BeginRematch()
-    {
-        ResetRematchConsent();
-
-        State = MatchSessionState.MatchInProgress;
-
-        if (resultPanel != null)
-        {
-            resultPanel.SetActive(false);
-        }
-
-        SetRematchStatus(string.Empty);
-
-        if (rematchButton != null)
-        {
-            rematchButton.interactable = true;
-        }
-
+        ResetLocalRematchConsent();
+        ApplyStatePresentation(MatchSessionState.MatchInProgress);
         matchManager.ResetMatch();
     }
 
-    public void RequestLocalLeave()
+    private bool HandlePlayerLeftLocally(string leavingPlayerId)
     {
         if (State == MatchSessionState.Closing)
-            return;
-
-        string currentPlayerId = null;
-
-        if (PlayerDataManager.Instance != null)
         {
-            currentPlayerId = PlayerDataManager.Instance.PlayerId;
-        }
-
-        HandlePlayerLeft(currentPlayerId);
-    }
-
-    public bool HandlePlayerLeft(string leavingPlayerId)
-    {
-        if (State == MatchSessionState.Closing)
             return false;
+        }
 
         MatchSetupData setup = null;
 
@@ -222,34 +513,19 @@ public class MatchSessionManager : MonoBehaviour
 
         if (setup != null && !string.IsNullOrWhiteSpace(leavingPlayerId) && !setup.ContainsPlayer(leavingPlayerId))
         {
-            Debug.LogWarning("A leave request was received from an account that is not part of this session.");
-
             return false;
         }
 
-        Debug.Log($"Player {leavingPlayerId ?? "unknown"} left the match session.");
-
-        CloseSessionLocally();
+        ApplyStatePresentation(MatchSessionState.Closing);
+        SceneManager.LoadScene(menusSceneName);
 
         return true;
     }
 
-    private void CloseSessionLocally()
+    private void ResetLocalRematchConsent()
     {
-        State = MatchSessionState.Closing;
-
-        if (FriendsManager.Instance != null)
-        {
-            FriendsManager.Instance.ClearActiveMatchSetup();
-        }
-
-        SceneManager.LoadScene(menusSceneName);
-    }
-
-    private void ResetRematchConsent()
-    {
-        hostRematchConsent = false;
-        opponentRematchConsent = false;
+        localHostRematchConsent = false;
+        localOpponentRematchConsent = false;
     }
 
     private void SetRematchStatus(string message)
@@ -263,27 +539,35 @@ public class MatchSessionManager : MonoBehaviour
     [ContextMenu("Debug/Simulate Other Player Rematch Consent")]
     private void DebugSimulateOtherPlayerRematchConsent()
     {
-        if (!TryGetOtherPlayerId(out string otherPlayerId))
+        if (IsNetworkSessionActive())
         {
-            Debug.LogWarning("No other player exists in the active session.");
-
+            Debug.LogWarning("The simulated rematch action is only for direct local testing.");
             return;
         }
 
-        RegisterRematchConsent(otherPlayerId);
+        if (!TryGetOtherPlayerId(out string otherPlayerId))
+        {
+            return;
+        }
+
+        RegisterOfflineRematchConsent(otherPlayerId);
     }
 
     [ContextMenu("Debug/Simulate Other Player Leave")]
     private void DebugSimulateOtherPlayerLeave()
     {
-        if (!TryGetOtherPlayerId(out string otherPlayerId))
+        if (IsNetworkSessionActive())
         {
-            Debug.LogWarning("No other player exists in the active session.");
-
+            Debug.LogWarning("The simulated leave action is only for direct local testing.");
             return;
         }
 
-        HandlePlayerLeft(otherPlayerId);
+        if (!TryGetOtherPlayerId(out string otherPlayerId))
+        {
+            return;
+        }
+
+        HandlePlayerLeftLocally(otherPlayerId);
     }
 
     private bool TryGetOtherPlayerId(out string otherPlayerId)

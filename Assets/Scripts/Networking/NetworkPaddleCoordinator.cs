@@ -151,7 +151,7 @@ public class NetworkPaddleCoordinator : NetworkBehaviour
             rightPaddle.ChangeOwnership(remoteClientId);
         }
 
-        Debug.Log($"[NetworkPaddleCoordinator] Left -> Client {hostClientId}, Right -? Client {remoteClientId}.");
+        Debug.Log($"[NetworkPaddleCoordinator] Left -> Client {hostClientId}, Right -> Client {remoteClientId}.");
     }
 
     private void HandleLeftClientChanged(ulong previousValue, ulong newValue)

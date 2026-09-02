@@ -5,12 +5,20 @@ using UnityEngine;
 [Serializable]
 public class PlayerData
 {
-    [SerializeField] private string playerId;
-    [SerializeField] private string displayName;
-    [SerializeField] private int softCurrency;
+    [SerializeField]
+    private string playerId;
 
-    [SerializeField] private int totalWins;
-    [SerializeField] private int totalLosses;
+    [SerializeField]
+    private string displayName;
+
+    [SerializeField]
+    private int softCurrency;
+
+    [SerializeField]
+    private int totalWins;
+
+    [SerializeField]
+    private int totalLosses;
 
     [SerializeField]
     private List<string> ownedCosmeticIds = new List<string>();
@@ -18,31 +26,45 @@ public class PlayerData
     [SerializeField]
     private List<EquippedCosmeticData> equippedCosmetics = new List<EquippedCosmeticData>();
 
+    public string PlayerId => playerId;
+
+    public string DisplayName => displayName;
+
+    public int SoftCurrency => softCurrency;
 
     public int TotalWins => totalWins;
+
     public int TotalLosses => totalLosses;
 
-    public void AddWin()
+    public IReadOnlyList<string> OwnedCosmeticIds
     {
-        totalWins++;
+        get
+        {
+            EnsureCosmeticCollections();
+
+            return ownedCosmeticIds;
+        }
     }
 
-    public void AddLoss()
+    public IReadOnlyList<EquippedCosmeticData> EquippedCosmetics
     {
-        totalLosses++;
-    }
+        get
+        {
+            EnsureCosmeticCollections();
 
-    public string PlayerId => playerId;
-    public string DisplayName => displayName;
-    public int SoftCurrency => softCurrency;
+            return equippedCosmetics;
+        }
+    }
 
     public PlayerData(string playerId, string displayName, int startingCurrency, int startingWins, int startingLosses)
     {
         this.playerId = playerId;
         this.displayName = displayName;
+
         softCurrency = Mathf.Max(0, startingCurrency);
 
         totalWins = Mathf.Max(0, startingWins);
+
         totalLosses = Mathf.Max(0, startingLosses);
 
         ownedCosmeticIds = new List<string>();
@@ -55,18 +77,26 @@ public class PlayerData
         softCurrency = Mathf.Max(0, amount);
     }
 
+    public void AddWin()
+    {
+        totalWins++;
+    }
+
+    public void AddLoss()
+    {
+        totalLosses++;
+    }
+
     private void EnsureCosmeticCollections()
     {
         if (ownedCosmeticIds == null)
         {
-            ownedCosmeticIds =
-                new List<string>();
+            ownedCosmeticIds = new List<string>();
         }
 
         if (equippedCosmetics == null)
         {
-            equippedCosmetics =
-                new List<EquippedCosmeticData>();
+            equippedCosmetics = new List<EquippedCosmeticData>();
         }
     }
 
@@ -95,14 +125,11 @@ public class PlayerData
         return true;
     }
 
-    public string GetEquippedCosmeticId(
-        CosmeticCategory category)
+    public string GetEquippedCosmeticId(CosmeticCategory category)
     {
         EnsureCosmeticCollections();
 
-        foreach (
-            EquippedCosmeticData equipped
-            in equippedCosmetics)
+        foreach (EquippedCosmeticData equipped in equippedCosmetics)
         {
             if (equipped.Category == category)
             {
@@ -120,17 +147,19 @@ public class PlayerData
         if (!OwnsCosmetic(cosmeticId))
             return false;
 
-        foreach (EquippedCosmeticData equipped in equippedCosmetics)
+        foreach (
+            EquippedCosmeticData equipped
+            in equippedCosmetics)
         {
-            if (equipped.Category == category)
-            {
-                if (equipped.CosmeticId == cosmeticId)
-                    return false;
+            if (equipped.Category != category)
+                continue;
 
-                equipped.SetCosmeticId(cosmeticId);
+            if (equipped.CosmeticId == cosmeticId)
+                return false;
 
-                return true;
-            }
+            equipped.SetCosmeticId(cosmeticId);
+
+            return true;
         }
 
         equippedCosmetics.Add(new EquippedCosmeticData(category, cosmeticId));

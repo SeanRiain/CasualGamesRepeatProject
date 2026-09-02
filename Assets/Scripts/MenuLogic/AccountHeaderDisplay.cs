@@ -8,39 +8,67 @@ public class AccountHeaderDisplay : MonoBehaviour
     [SerializeField] private TMP_Text currencyText;
     [SerializeField] private TMP_Text overallRecordText;
 
-    private void Start()
+    private PlayerDataManager playerDataManager;
+
+    private void OnEnable()
     {
-        if (PlayerDataManager.Instance == null)
+        playerDataManager = PlayerDataManager.Instance;
+
+        if (playerDataManager == null)
         {
             Debug.LogError("No PlayerDataManager exists when AccountHeaderDisplay starts.");
-
             return;
         }
 
-        PlayerDataManager.Instance.CurrencyChanged += UpdateCurrency;
-        PlayerDataManager.Instance.RecordChanged += UpdateRecord;
+        playerDataManager.PlayerReady += HandlePlayerReady;
+        playerDataManager.CurrencyChanged += UpdateCurrency;
+        playerDataManager.RecordChanged += UpdateRecord;
 
+        if (playerDataManager.IsReady)
+        {
+            RefreshAccountDisplay();
+        }
+        else
+        {
+            ShowLoadingState();
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (playerDataManager == null)
+            return;
+
+        playerDataManager.PlayerReady -= HandlePlayerReady;
+        playerDataManager.CurrencyChanged -= UpdateCurrency;
+        playerDataManager.RecordChanged -= UpdateRecord;
+    }
+
+    private void HandlePlayerReady()
+    {
         RefreshAccountDisplay();
     }
 
-    private void OnDestroy()
+    private void ShowLoadingState()
     {
-        if (PlayerDataManager.Instance == null)
-            return;
-
-        PlayerDataManager.Instance.CurrencyChanged -= UpdateCurrency;
-        PlayerDataManager.Instance.RecordChanged -= UpdateRecord;
+        displayNameText.text = "Username: Loading...";
+        playerIdText.text = "ID: Loading...";
+        currencyText.text = "Currency: --";
+        overallRecordText.text = "Record: --";
     }
 
     private void RefreshAccountDisplay()
     {
-        displayNameText.text =$"Username: {PlayerDataManager.Instance.DisplayName}";
+        if (playerDataManager == null || !playerDataManager.IsReady)
+        {
+            return;
+        }
 
-        playerIdText.text =$"ID: {PlayerDataManager.Instance.PlayerId}";
+        displayNameText.text = $"Username: {playerDataManager.DisplayName}";
+        playerIdText.text = $"ID: {playerDataManager.PlayerId}";
 
-        UpdateCurrency(PlayerDataManager.Instance.Currency);
-
-        UpdateRecord(PlayerDataManager.Instance.TotalWins, PlayerDataManager.Instance.TotalLosses);
+        UpdateCurrency(playerDataManager.Currency);
+        UpdateRecord(playerDataManager.TotalWins, playerDataManager.TotalLosses);
     }
 
     private void UpdateCurrency(int amount)

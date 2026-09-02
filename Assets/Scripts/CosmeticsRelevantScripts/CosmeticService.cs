@@ -7,22 +7,25 @@ public static class CosmeticService
     {
         PlayerDataManager player = PlayerDataManager.Instance;
 
-        if (player == null || definition == null)
+        if (player == null || !player.IsReady || definition == null)
         {
             return false;
         }
 
         switch (definition.UnlockType)
         {
-            case CosmeticUnlockType.None: return true;
+            case CosmeticUnlockType.None:
+                return true;
 
-            case CosmeticUnlockType.TotalWins: return player.TotalWins >= definition.UnlockThreshold;
+            case CosmeticUnlockType.TotalWins:
+                return player.TotalWins >= definition.UnlockThreshold;
 
-            case CosmeticUnlockType.TotalMatches: int totalMatches = player.TotalWins + player.TotalLosses;
-
+            case CosmeticUnlockType.TotalMatches:
+                int totalMatches = player.TotalWins + player.TotalLosses;
                 return totalMatches >= definition.UnlockThreshold;
 
-            default: return false;
+            default:
+                return false;
         }
     }
 
@@ -30,13 +33,12 @@ public static class CosmeticService
     {
         PlayerDataManager player = PlayerDataManager.Instance;
 
-        if (player == null || definition == null)
+        if (player == null || !player.IsReady || definition == null)
         {
             return CosmeticStoreState.Locked;
         }
 
         bool owned = player.OwnsCosmetic(definition.CosmeticId);
-
         string equippedId = player.GetEquippedCosmeticId(definition.Category);
 
         if (owned && equippedId == definition.CosmeticId)
@@ -61,13 +63,17 @@ public static class CosmeticService
     {
         switch (definition.UnlockType)
         {
-            case CosmeticUnlockType.None: return string.Empty;
+            case CosmeticUnlockType.None:
+                return string.Empty;
 
-            case CosmeticUnlockType.TotalWins: return $"Unlocks at {definition.UnlockThreshold} total wins";
+            case CosmeticUnlockType.TotalWins:
+                return $"Unlocks at {definition.UnlockThreshold} total wins";
 
-            case CosmeticUnlockType.TotalMatches: return $"Unlocks after {definition.UnlockThreshold} matches";
+            case CosmeticUnlockType.TotalMatches:
+                return $"Unlocks after {definition.UnlockThreshold} matches";
 
-            default: return "Locked";
+            default:
+                return "Locked";
         }
     }
 
@@ -75,17 +81,15 @@ public static class CosmeticService
     {
         PlayerDataManager player = PlayerDataManager.Instance;
 
-        if (player == null)
+        if (player == null || !player.IsReady)
         {
-            message = "Player account is unavailable.";
-
+            message = "Player account is still loading.";
             return false;
         }
 
         if (definition == null)
         {
             message = "Cosmetic definition is unavailable.";
-
             return false;
         }
 
@@ -94,14 +98,12 @@ public static class CosmeticService
         if (state == CosmeticStoreState.Locked)
         {
             message = GetUnlockDescription(definition);
-
             return false;
         }
 
         if (state == CosmeticStoreState.Owned || state == CosmeticStoreState.Equipped)
         {
             message = "This cosmetic is already owned.";
-
             return false;
         }
 
@@ -110,27 +112,23 @@ public static class CosmeticService
         if (price > 0 && !player.CanAfford(price))
         {
             message = $"Not enough currency. Cost: {price}.";
-
             return false;
         }
 
         if (price > 0 && !player.TrySpendCurrency(price))
         {
             message = "The purchase could not be completed.";
-
             return false;
         }
 
         if (!player.GrantCosmetic(definition.CosmeticId))
         {
-            // Defensive refund if something unexpected fails
             if (price > 0)
             {
                 player.AddCurrency(price);
             }
 
             message = "The cosmetic could not be added to the account.";
-
             return false;
         }
 
@@ -143,17 +141,21 @@ public static class CosmeticService
     {
         PlayerDataManager player = PlayerDataManager.Instance;
 
-        if (player == null || definition == null)
+        if (player == null || !player.IsReady)
+        {
+            message = "Player account is still loading.";
+            return false;
+        }
+
+        if (definition == null)
         {
             message = "Cosmetic data is unavailable.";
-
             return false;
         }
 
         if (!player.OwnsCosmetic(definition.CosmeticId))
         {
             message = "You do not own this cosmetic.";
-
             return false;
         }
 
@@ -162,7 +164,6 @@ public static class CosmeticService
         if (currentId == definition.CosmeticId)
         {
             message = $"{definition.DisplayName} is already equipped.";
-
             return false;
         }
 
@@ -171,7 +172,6 @@ public static class CosmeticService
         if (!equipped)
         {
             message = "The cosmetic could not be equipped.";
-
             return false;
         }
 
@@ -184,7 +184,7 @@ public static class CosmeticService
     {
         PlayerDataManager player = PlayerDataManager.Instance;
 
-        if (player == null || catalog == null)
+        if (player == null || !player.IsReady || catalog == null)
         {
             return;
         }
@@ -196,7 +196,6 @@ public static class CosmeticService
             if (defaultItem == null)
             {
                 Debug.LogError($"No default cosmetic exists for {category}.");
-
                 continue;
             }
 
@@ -206,15 +205,58 @@ public static class CosmeticService
             }
 
             string equippedId = player.GetEquippedCosmeticId(category);
-
             CosmeticDefinition equippedDefinition = catalog.GetById(equippedId);
 
-            bool equippedStateIsValid = equippedDefinition != null && equippedDefinition.Category == category && player.OwnsCosmetic(equippedId);
+            bool equippedStateIsValid =
+                equippedDefinition != null &&
+                equippedDefinition.Category == category &&
+                player.OwnsCosmetic(equippedId);
 
             if (!equippedStateIsValid)
             {
                 player.EquipCosmetic(category, defaultItem.CosmeticId);
             }
         }
+    }
+
+    public static bool EnsureDefaults(PlayerData playerData, CosmeticCatalog catalog)
+    {
+        if (playerData == null || catalog == null)
+        {
+            return false;
+        }
+
+        bool changed = false;
+
+        foreach (CosmeticCategory category in Enum.GetValues(typeof(CosmeticCategory)))
+        {
+            CosmeticDefinition defaultItem = catalog.GetDefault(category);
+
+            if (defaultItem == null)
+            {
+                Debug.LogError($"No default cosmetic exists for {category}.");
+                continue;
+            }
+
+            if (!playerData.OwnsCosmetic(defaultItem.CosmeticId))
+            {
+                changed |= playerData.AddOwnedCosmetic(defaultItem.CosmeticId);
+            }
+
+            string equippedId = playerData.GetEquippedCosmeticId(category);
+            CosmeticDefinition equippedDefinition = catalog.GetById(equippedId);
+
+            bool equippedStateIsValid =
+                equippedDefinition != null &&
+                equippedDefinition.Category == category &&
+                playerData.OwnsCosmetic(equippedId);
+
+            if (!equippedStateIsValid)
+            {
+                changed |= playerData.SetEquippedCosmetic(category, defaultItem.CosmeticId);
+            }
+        }
+
+        return changed;
     }
 }

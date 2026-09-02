@@ -26,25 +26,21 @@ public class StorePanelController : MonoBehaviour
         if (PlayerDataManager.Instance == null)
         {
             Debug.LogError("Store cannot open because PlayerDataManager is missing.");
-
             return;
         }
 
+        PlayerDataManager.Instance.PlayerReady += HandlePlayerReady;
         PlayerDataManager.Instance.CurrencyChanged += HandleCurrencyChanged;
-
         PlayerDataManager.Instance.RecordChanged += HandleRecordChanged;
-
         PlayerDataManager.Instance.CosmeticsChanged += HandleCosmeticsChanged;
 
-        CosmeticService.EnsureDefaults(cosmeticCatalog);
-
-        BuildStoreIfNecessary();
-
-        RefreshStore();
-
-        if (feedbackText != null)
+        if (PlayerDataManager.Instance.IsReady)
         {
-            feedbackText.text = string.Empty;
+            InitialiseReadyStore();
+        }
+        else if (feedbackText != null)
+        {
+            feedbackText.text = "Loading player account...";
         }
     }
 
@@ -53,11 +49,28 @@ public class StorePanelController : MonoBehaviour
         if (PlayerDataManager.Instance == null)
             return;
 
+        PlayerDataManager.Instance.PlayerReady -= HandlePlayerReady;
         PlayerDataManager.Instance.CurrencyChanged -= HandleCurrencyChanged;
-
         PlayerDataManager.Instance.RecordChanged -= HandleRecordChanged;
-
         PlayerDataManager.Instance.CosmeticsChanged -= HandleCosmeticsChanged;
+    }
+
+    private void HandlePlayerReady()
+    {
+        InitialiseReadyStore();
+    }
+
+    private void InitialiseReadyStore()
+    {
+        CosmeticService.EnsureDefaults(cosmeticCatalog);
+
+        BuildStoreIfNecessary();
+        RefreshStore();
+
+        if (feedbackText != null)
+        {
+            feedbackText.text = string.Empty;
+        }
     }
 
     private void BuildStoreIfNecessary()
@@ -110,8 +123,7 @@ public class StorePanelController : MonoBehaviour
         }
     }
 
-    private void HandleItemAction(
-        CosmeticDefinition definition)
+    private void HandleItemAction(CosmeticDefinition definition)
     {
         CosmeticStoreState state = CosmeticService.GetState(definition);
 

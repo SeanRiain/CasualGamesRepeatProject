@@ -20,6 +20,35 @@ public class GameCosmeticApplier : MonoBehaviour
 
     private void Start()
     {
+        if (PlayerDataManager.Instance == null)
+        {
+            Debug.LogWarning("No PlayerDataManager exists. Cosmetics cannot be applied.");
+
+            return;
+        }
+
+        if (PlayerDataManager.Instance.IsReady)
+        {
+            ApplyCurrentPlayerCosmetics();
+
+            return;
+        }
+
+        PlayerDataManager.Instance.PlayerReady += HandlePlayerReady;
+    }
+
+    private void OnDestroy()
+    {
+        if (PlayerDataManager.Instance == null)
+            return;
+
+        PlayerDataManager.Instance.PlayerReady -= HandlePlayerReady;
+    }
+
+    private void HandlePlayerReady()
+    {
+        PlayerDataManager.Instance.PlayerReady -= HandlePlayerReady;
+
         ApplyCurrentPlayerCosmetics();
     }
 
@@ -64,8 +93,7 @@ public class GameCosmeticApplier : MonoBehaviour
         if (definition == null)
             return;
 
-        foreach (
-            SpriteRenderer borderRenderer in borderRenderers)
+        foreach (SpriteRenderer borderRenderer in borderRenderers)
         {
             if (borderRenderer != null)
             {

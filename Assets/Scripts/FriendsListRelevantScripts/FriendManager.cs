@@ -355,6 +355,55 @@ public class FriendsManager : MonoBehaviour
         return true;
     }
 
+    public bool ApplyBackendRelationshipSnapshot(string playerAId, string playerBId, int playerAWins, int playerBWins, int matchesPlayed)
+    {
+        if (PlayerDataManager.Instance == null)
+            return false;
+
+        string currentPlayerId = PlayerDataManager.Instance.PlayerId;
+
+        if (currentPlayerId != playerAId && currentPlayerId != playerBId)
+        {
+            Debug.LogWarning("[Friends] Backend relationship does not contain the local player.");
+            return false;
+        }
+
+        FriendRelationshipData relationship = GetRelationshipBetween(playerAId, playerBId);
+
+        if (relationship == null)
+        {
+            relationship = new FriendRelationshipData(playerAId, playerBId);
+            relationships.Add(relationship);
+        }
+
+        relationship.ApplyAuthoritativeSnapshot(playerAId, playerBId, playerAWins, playerBWins, matchesPlayed);
+
+        string opponentPlayerId = relationship.GetOtherPlayerId(currentPlayerId);
+
+        EnsureRuntimeProfile(opponentPlayerId);
+
+        FriendsChanged?.Invoke();
+
+        Debug.Log($"[Friends] Applied backend pair record. Opponent: {opponentPlayerId}. Record: {relationship.GetWinsFor(currentPlayerId)}-{relationship.GetLossesFor(currentPlayerId)}.");
+
+        return true;
+    }
+
+    private void EnsureRuntimeProfile(string playerId)
+    {
+        if (string.IsNullOrWhiteSpace(playerId))
+        {
+            return;
+        }
+
+        if (FindRegisteredAccount(playerId) != null)
+            return;
+
+        string shortId = playerId.Length > 8 ? playerId.Substring(0, 8) : playerId;
+
+        temporaryRegisteredAccounts.Add(new PlayerProfileData(playerId, $"Player {shortId}"));
+    }
+
     public void ClearActiveMatchSetup()
     {
         ActiveMatchSetup = null;

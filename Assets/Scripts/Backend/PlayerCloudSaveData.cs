@@ -21,7 +21,7 @@ public class CloudEquippedCosmeticData
 [Serializable]
 public class PlayerCloudSaveData
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     public int schemaVersion = CurrentSchemaVersion;
 
@@ -36,6 +36,8 @@ public class PlayerCloudSaveData
     public List<string> ownedCosmeticIds = new List<string>();
 
     public List<CloudEquippedCosmeticData> equippedCosmetics = new List<CloudEquippedCosmeticData>();
+
+    public List<string> processedSettlementIds = new List<string>();
 
     public static PlayerCloudSaveData FromPlayerData( PlayerData player)
     {
@@ -76,6 +78,16 @@ public class PlayerCloudSaveData
             data.equippedCosmetics.Add(new CloudEquippedCosmeticData(equipped.Category, equipped.CosmeticId));
         }
 
+        foreach (string settlementId in player.ProcessedSettlementIds)
+        {
+            if (string.IsNullOrWhiteSpace(settlementId))
+            {
+                continue;
+            }
+
+            data.processedSettlementIds.Add(settlementId);
+        }
+
         return data;
     }
 
@@ -106,6 +118,14 @@ public class PlayerCloudSaveData
                 }
 
                 player.SetEquippedCosmetic(equipped.category, equipped.cosmeticId);
+            }
+        }
+
+        if (processedSettlementIds != null)
+        {
+            foreach (string settlementId in processedSettlementIds)
+            {
+                player.AddProcessedSettlementId(settlementId);
             }
         }
 

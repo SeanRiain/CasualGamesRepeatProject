@@ -48,6 +48,9 @@ public class MatchManager : NetworkBehaviour
     private bool matchOver = false;
     private bool pointResetInProgress = false;
 
+    private int currentMatchNumber;
+    public int CurrentMatchNumber => currentMatchNumber;
+
     private Coroutine pointResetCoroutine;
     private Coroutine networkStartCoroutine;
 
@@ -224,7 +227,12 @@ public class MatchManager : NetworkBehaviour
 
         PublishNetworkWinner(winner);
 
-        RecordLocalMatchResult(winner);
+        if (!IsNetworkSessionActive())
+        {
+            RecordLocalMatchResult(winner);
+        }
+
+        MatchEnded?.Invoke(winner); RecordLocalMatchResult(winner);
 
         MatchEnded?.Invoke(winner);
     }
@@ -287,6 +295,13 @@ public class MatchManager : NetworkBehaviour
             Debug.LogWarning("[MatchManager] A non-authoritative client attempted to reset the match.");
 
             return;
+        }
+
+        if (IsNetworkSessionActive() && IsServer)
+        {
+            currentMatchNumber++;
+
+            Debug.Log($"[MatchManager] Starting statistical match {currentMatchNumber}.");
         }
 
         CancelPointReset();

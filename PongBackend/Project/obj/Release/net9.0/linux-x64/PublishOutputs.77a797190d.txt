@@ -1,0 +1,8 @@
+C:\Users\abysm\AppData\Local\Temp\PongBackend\module-compilation\PongBackend.dll
+C:\Users\abysm\AppData\Local\Temp\PongBackend\module-compilation\PongBackend.deps.json
+C:\Users\abysm\AppData\Local\Temp\PongBackend\module-compilation\PongBackend.pdb
+C:\Users\abysm\AppData\Local\Temp\PongBackend\module-compilation\Unity.Services.CloudCode.Apis.dll
+C:\Users\abysm\AppData\Local\Temp\PongBackend\module-compilation\Unity.Services.CloudCode.Core.dll
+C:\Users\abysm\AppData\Local\Temp\PongBackend\module-compilation\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\abysm\AppData\Local\Temp\PongBackend\module-compilation\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\abysm\AppData\Local\Temp\PongBackend\module-compilation\Newtonsoft.Json.dll

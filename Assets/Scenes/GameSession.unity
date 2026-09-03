@@ -2648,6 +2648,7 @@ GameObject:
   - component: {fileID: 760178830}
   - component: {fileID: 760178831}
   - component: {fileID: 760178829}
+  - component: {fileID: 760178832}
   m_Layer: 0
   m_Name: MatchManager
   m_TagString: Untagged
@@ -2721,6 +2722,23 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
+--- !u!114 &760178832
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 760178828}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53f641072f96cd9438a3150c8d63ccf0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkMatchSettlementController
+  ShowTopMostFoldoutHeaderGroup: 1
+  matchManager: {fileID: 760178829}
+  matchSessionManager: {fileID: 1456539503}
+  maximumAttempts: 3
+  retryDelaySeconds: 1
 --- !u!1 &825018261
 GameObject:
   m_ObjectHideFlags: 0

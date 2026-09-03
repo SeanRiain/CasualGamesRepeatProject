@@ -30,6 +30,8 @@ public class NetworkSessionController : MonoBehaviour
 
     public string CurrentJoinCode => activeSession?.Code ?? string.Empty;
 
+    public string CurrentSessionId => activeSession?.Id ?? string.Empty;
+
     public string AuthenticatedPlayerId
     {
         get
@@ -42,6 +44,51 @@ public class NetworkSessionController : MonoBehaviour
 
             return AuthenticationService.Instance.PlayerId;
         }
+    }
+
+    public bool TryGetOnlineOpponentPlayerId(out string opponentPlayerId)
+    {
+        opponentPlayerId = null;
+
+        if (activeSession == null)
+            return false;
+
+        string localPlayerId = AuthenticatedPlayerId;
+
+        if (string.IsNullOrWhiteSpace(localPlayerId))
+        {
+            return false;
+        }
+
+        string foundOpponent = null;
+
+        foreach (var player in activeSession.Players)
+        {
+            if (player == null)
+                continue;
+
+            if (string.IsNullOrWhiteSpace(player.Id))
+            {
+                continue;
+            }
+
+            if (string.Equals(player.Id, localPlayerId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (foundOpponent != null)
+            {
+                // Pong Rivals expects exactly one opponent.
+                return false;
+            }
+
+            foundOpponent = player.Id;
+        }
+
+        opponentPlayerId = foundOpponent;
+
+        return !string.IsNullOrWhiteSpace(opponentPlayerId);
     }
 
     private void Awake()

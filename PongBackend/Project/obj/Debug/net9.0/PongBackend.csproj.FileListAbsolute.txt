@@ -1,0 +1,13 @@
+C:\Users\abysm\source\repos\CasualGamesRepeatProject\PongBackend\Project\bin\Debug\net9.0\PongBackend.deps.json
+C:\Users\abysm\source\repos\CasualGamesRepeatProject\PongBackend\Project\bin\Debug\net9.0\PongBackend.dll
+C:\Users\abysm\source\repos\CasualGamesRepeatProject\PongBackend\Project\bin\Debug\net9.0\PongBackend.pdb
+C:\Users\abysm\source\repos\CasualGamesRepeatProject\PongBackend\Project\obj\Debug\net9.0\PongBackend.csproj.AssemblyReference.cache
+C:\Users\abysm\source\repos\CasualGamesRepeatProject\PongBackend\Project\obj\Debug\net9.0\PongBackend.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\abysm\source\repos\CasualGamesRepeatProject\PongBackend\Project\obj\Debug\net9.0\PongBackend.AssemblyInfoInputs.cache
+C:\Users\abysm\source\repos\CasualGamesRepeatProject\PongBackend\Project\obj\Debug\net9.0\PongBackend.AssemblyInfo.cs
+C:\Users\abysm\source\repos\CasualGamesRepeatProject\PongBackend\Project\obj\Debug\net9.0\PongBackend.csproj.CoreCompileInputs.cache
+C:\Users\abysm\source\repos\CasualGamesRepeatProject\PongBackend\Project\obj\Debug\net9.0\PongBackend.sourcelink.json
+C:\Users\abysm\source\repos\CasualGamesRepeatProject\PongBackend\Project\obj\Debug\net9.0\PongBackend.dll
+C:\Users\abysm\source\repos\CasualGamesRepeatProject\PongBackend\Project\obj\Debug\net9.0\refint\PongBackend.dll
+C:\Users\abysm\source\repos\CasualGamesRepeatProject\PongBackend\Project\obj\Debug\net9.0\PongBackend.pdb
+C:\Users\abysm\source\repos\CasualGamesRepeatProject\PongBackend\Project\obj\Debug\net9.0\ref\PongBackend.dll

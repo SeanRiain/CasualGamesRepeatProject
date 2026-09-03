@@ -26,6 +26,9 @@ public class PlayerData
     [SerializeField]
     private List<EquippedCosmeticData> equippedCosmetics = new List<EquippedCosmeticData>();
 
+    [SerializeField]
+    private List<string> processedSettlementIds = new List<string>();
+
     public string PlayerId => playerId;
 
     public string DisplayName => displayName;
@@ -40,17 +43,27 @@ public class PlayerData
     {
         get
         {
-            EnsureCosmeticCollections();
+            EnsureCollections();
 
             return ownedCosmeticIds;
         }
     }
 
+    public IReadOnlyList<string> ProcessedSettlementIds
+{
+    get
+    {
+        EnsureCollections();
+
+        return processedSettlementIds;
+    }
+}
+
     public IReadOnlyList<EquippedCosmeticData> EquippedCosmetics
     {
         get
         {
-            EnsureCosmeticCollections();
+            EnsureCollections();
 
             return equippedCosmetics;
         }
@@ -87,7 +100,7 @@ public class PlayerData
         totalLosses++;
     }
 
-    private void EnsureCosmeticCollections()
+    private void EnsureCollections()
     {
         if (ownedCosmeticIds == null)
         {
@@ -98,11 +111,16 @@ public class PlayerData
         {
             equippedCosmetics = new List<EquippedCosmeticData>();
         }
+
+        if (processedSettlementIds == null)
+        {
+            processedSettlementIds = new List<string>();
+        }
     }
 
     public bool OwnsCosmetic(string cosmeticId)
     {
-        EnsureCosmeticCollections();
+        EnsureCollections();
 
         if (string.IsNullOrWhiteSpace(cosmeticId))
             return false;
@@ -112,7 +130,7 @@ public class PlayerData
 
     public bool AddOwnedCosmetic(string cosmeticId)
     {
-        EnsureCosmeticCollections();
+        EnsureCollections();
 
         if (string.IsNullOrWhiteSpace(cosmeticId))
             return false;
@@ -127,7 +145,7 @@ public class PlayerData
 
     public string GetEquippedCosmeticId(CosmeticCategory category)
     {
-        EnsureCosmeticCollections();
+        EnsureCollections();
 
         foreach (EquippedCosmeticData equipped in equippedCosmetics)
         {
@@ -142,7 +160,7 @@ public class PlayerData
 
     public bool SetEquippedCosmetic(CosmeticCategory category, string cosmeticId)
     {
-        EnsureCosmeticCollections();
+        EnsureCollections();
 
         if (!OwnsCosmetic(cosmeticId))
             return false;
@@ -163,6 +181,25 @@ public class PlayerData
         }
 
         equippedCosmetics.Add(new EquippedCosmeticData(category, cosmeticId));
+
+        return true;
+    }
+
+    internal bool AddProcessedSettlementId(string settlementId)
+    {
+        EnsureCollections();
+
+        if (string.IsNullOrWhiteSpace(settlementId))
+        {
+            return false;
+        }
+
+        if (processedSettlementIds.Contains(settlementId))
+        {
+            return false;
+        }
+
+        processedSettlementIds.Add(settlementId);
 
         return true;
     }

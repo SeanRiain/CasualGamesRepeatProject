@@ -30,6 +30,8 @@ public class PlayerCloudPersistence : MonoBehaviour
 
     public bool IsSaving => saveInProgress;
 
+    private bool suppressAutoSave;
+
     private void Awake()
     {
         playerDataManager = GetComponent<PlayerDataManager>();
@@ -215,6 +217,10 @@ public class PlayerCloudPersistence : MonoBehaviour
 
     private void QueueSave()
     {
+
+        if (suppressAutoSave)
+            return;
+
         if (!initializationComplete)
             return;
 
@@ -231,6 +237,103 @@ public class PlayerCloudPersistence : MonoBehaviour
         }
 
         pendingSaveCoroutine = StartCoroutine(SaveAfterDebounce());
+    }
+
+    public async Task<bool> ReloadCurrentPlayerFromCloudAsync()
+    {
+        if (!initializationComplete)
+        {
+            Debug.LogWarning("[CloudSave] Cannot reload because initialization is incomplete.");
+            return false;
+        }
+
+        if (!playerDataManager.IsCloudBacked)
+        {
+            Debug.LogWarning("[CloudSave] Cannot reload a non-cloud-backed account.");
+            return false;
+        }
+
+        NetworkSessionController services = NetworkSessionController.Instance;
+
+        if (services == null)
+        {
+            Debug.LogError("[CloudSave] No NetworkSessionController exists.");
+            return false;
+        }
+
+        if (!await services.EnsureServicesReadyAsync())
+        {
+            return false;
+        }
+
+        string authenticatedPlayerId = services.AuthenticatedPlayerId;
+
+        try
+        {
+            var results = await CloudSaveService.Instance.Data.Player.LoadAsync(
+                new HashSet<string>
+                {
+                AccountKey
+                });
+
+            if (!results.TryGetValue(AccountKey, out var savedItem))
+            {
+                Debug.LogError("[CloudSave] Existing cloud account disappeared during reload.");
+                return false;
+            }
+
+            PlayerCloudSaveData cloudData = savedItem.Value.GetAs<PlayerCloudSaveData>();
+
+            if (cloudData == null)
+            {
+                Debug.LogError("[CloudSave] Reloaded account could not be deserialized.");
+                return false;
+            }
+
+            if (cloudData.schemaVersion > PlayerCloudSaveData.CurrentSchemaVersion)
+            {
+                Debug.LogError("[CloudSave] Reloaded account uses an unsupported schema.");
+                return false;
+            }
+
+            PlayerData loadedPlayer = cloudData.ToPlayerData(authenticatedPlayerId, playerDataManager.DefaultDisplayName);
+
+            bool defaultsRepaired = CosmeticService.EnsureDefaults(loadedPlayer, cosmeticCatalog);
+
+            suppressAutoSave = true;
+
+            try
+            {
+                playerDataManager.InitializePlayer(loadedPlayer, cloudBacked: true);
+            }
+            finally
+            {
+                suppressAutoSave = false;
+            }
+
+            Debug.Log("[CloudSave] Player account reloaded after backend update.");
+
+            if (defaultsRepaired || cloudData.schemaVersion != PlayerCloudSaveData.CurrentSchemaVersion)
+            {
+                await SaveCurrentPlayerAsync();
+            }
+
+            return true;
+        }
+        catch (CloudSaveException exception)
+        {
+            Debug.LogError("[CloudSave] Post-settlement account reload failed.");
+            Debug.LogException(exception);
+
+            return false;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError("[CloudSave] Unexpected post-settlement reload failure.");
+            Debug.LogException(exception);
+
+            return false;
+        }
     }
 
     private IEnumerator SaveAfterDebounce()

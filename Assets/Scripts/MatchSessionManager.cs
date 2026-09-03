@@ -7,7 +7,9 @@ using UnityEngine.UI;
 public enum MatchSessionState
 {
     MatchInProgress,
+    SettlingResult,
     AwaitingRematchDecision,
+    SettlementFailed,
     Closing
 }
 
@@ -112,7 +114,7 @@ public class MatchSessionManager : NetworkBehaviour
         leftRematchConsent.Value = false;
         rightRematchConsent.Value = false;
 
-        SetServerState(MatchSessionState.AwaitingRematchDecision);
+        SetServerState(MatchSessionState.SettlingResult);
     }
 
     public void RequestLocalRematch()
@@ -194,10 +196,30 @@ public class MatchSessionManager : NetworkBehaviour
         SetServerState(MatchSessionState.MatchInProgress);
     }
 
+    public void ServerCompleteSettlement(bool succeeded)
+    {
+        if (!IsServer)
+            return;
+
+        if (networkState.Value != MatchSessionState.SettlingResult)
+        {
+            return;
+        }
+
+        SetServerState(succeeded ? MatchSessionState.AwaitingRematchDecision : MatchSessionState.SettlementFailed);
+    }
+
     public void RequestLocalLeave()
     {
         if (State == MatchSessionState.Closing)
         {
+            return;
+        }
+
+        if (State == MatchSessionState.SettlingResult)
+        {
+            SetRematchStatus("Saving match result...");
+
             return;
         }
 
@@ -317,6 +339,24 @@ public class MatchSessionManager : NetworkBehaviour
 
                 break;
 
+            case MatchSessionState.SettlingResult:
+
+                if (resultPanel != null)
+                {
+                    resultPanel.SetActive(true);
+                }
+
+                if (rematchButton != null)
+                {
+                    rematchButton.interactable =
+                        false;
+                }
+
+                SetRematchStatus(
+                    "Saving match result...");
+
+                break;
+
             case MatchSessionState.AwaitingRematchDecision:
                 if (resultPanel != null)
                 {
@@ -336,6 +376,25 @@ public class MatchSessionManager : NetworkBehaviour
 
                     SetRematchStatus(string.Empty);
                 }
+
+                break;
+
+            case MatchSessionState.SettlementFailed:
+
+                if (resultPanel != null)
+                {
+                    resultPanel.SetActive(true);
+                }
+
+                if (rematchButton != null)
+                {
+                    rematchButton.interactable =
+                        false;
+                }
+
+                SetRematchStatus(
+                    "Match result could not be saved. " +
+                    "Leave the session and try again.");
 
                 break;
 

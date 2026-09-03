@@ -10,18 +10,21 @@ public class AccountHeaderDisplay : MonoBehaviour
 
     private PlayerDataManager playerDataManager;
 
-    private void OnEnable()
+    private void Start()
     {
         playerDataManager = PlayerDataManager.Instance;
 
         if (playerDataManager == null)
         {
             Debug.LogError("No PlayerDataManager exists when AccountHeaderDisplay starts.");
+
             return;
         }
 
         playerDataManager.PlayerReady += HandlePlayerReady;
+
         playerDataManager.CurrencyChanged += UpdateCurrency;
+
         playerDataManager.RecordChanged += UpdateRecord;
 
         if (playerDataManager.IsReady)
@@ -34,13 +37,15 @@ public class AccountHeaderDisplay : MonoBehaviour
         }
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
         if (playerDataManager == null)
             return;
 
         playerDataManager.PlayerReady -= HandlePlayerReady;
+
         playerDataManager.CurrencyChanged -= UpdateCurrency;
+
         playerDataManager.RecordChanged -= UpdateRecord;
     }
 
